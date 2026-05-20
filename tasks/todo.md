@@ -1,3 +1,3 @@
 # RingLight Overlay — Active TODO
 
-_(empty — sprint S0 in progress)_
+- [x] S0 — Bootstrap (plano_1.md complete)
