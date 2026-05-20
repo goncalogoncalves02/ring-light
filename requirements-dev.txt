@@ -1,0 +1,5 @@
+PySide6
+keyboard
+pyinstaller
+pytest
+black
