@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 import ringlight_overlay
 
@@ -12,11 +13,11 @@ def test_version_is_set() -> None:
     assert ringlight_overlay.__version__ == "0.0.1"
 
 
-def test_module_runs_and_writes_startup_log(tmp_path: Path) -> None:
-    appdata = Path(os.environ["APPDATA"]) / "RingLightOverlay"
-    log_path = appdata / "app.log"
-    if log_path.exists():
-        log_path.unlink()
+def test_module_runs_and_writes_startup_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    log_path = tmp_path / "RingLightOverlay" / "app.log"
 
     result = subprocess.run(
         [sys.executable, "-m", "ringlight_overlay"],
