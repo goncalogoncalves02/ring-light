@@ -136,7 +136,12 @@ def save_config(data: ConfigData, path: Path | None = None) -> None:
 
 
 class DebouncedSaver:
-    """Stub — full implementation lands in Task 17."""
+    """Coalesce rapid save requests into a single delayed write.
+
+    Backed by ``threading.Timer`` so it remains usable without the Qt event
+    loop and is trivially unit-testable. Callers MUST call ``flush()`` on
+    application shutdown to guarantee any pending data is written.
+    """
 
     def __init__(
         self,
@@ -145,3 +150,35 @@ class DebouncedSaver:
     ) -> None:
         self._save_fn = save_fn
         self._delay = delay
+        self._lock = threading.Lock()
+        self._timer: threading.Timer | None = None
+        self._pending: ConfigData | None = None
+
+    def request_save(self, data: ConfigData) -> None:
+        with self._lock:
+            self._pending = data
+            if self._timer is not None:
+                self._timer.cancel()
+            timer = threading.Timer(self._delay, self._fire)
+            timer.daemon = True
+            self._timer = timer
+        timer.start()
+
+    def flush(self) -> None:
+        with self._lock:
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None
+            data = self._pending
+            self._pending = None
+        if data is not None:
+            self._save_fn(data)
+
+    def _fire(self) -> None:
+        with self._lock:
+            self._timer = None
+            data = self._pending
+            self._pending = None
+        if data is not None:
+            self._save_fn(data)
+

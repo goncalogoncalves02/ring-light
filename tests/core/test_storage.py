@@ -54,3 +54,45 @@ def test_load_missing_file_returns_default(tmp_path: Path) -> None:
     )
     assert isinstance(config, ConfigData)
     assert config.version == 1
+
+
+def test_debounced_saver_fires_after_delay() -> None:
+    import time
+
+    calls: list[ConfigData] = []
+    saver = DebouncedSaver(calls.append, delay=0.05)
+    saver.request_save(default_config())
+    time.sleep(0.2)
+    assert len(calls) == 1
+
+
+def test_debounced_saver_coalesces_rapid_requests() -> None:
+    import time
+
+    calls: list[ConfigData] = []
+    saver = DebouncedSaver(calls.append, delay=0.1)
+    for _ in range(5):
+        saver.request_save(default_config())
+        time.sleep(0.02)
+    time.sleep(0.3)
+    assert len(calls) == 1
+
+
+def test_debounced_saver_flush_writes_immediately_and_clears_pending() -> None:
+    import time
+
+    calls: list[ConfigData] = []
+    saver = DebouncedSaver(calls.append, delay=10.0)
+    saver.request_save(default_config())
+    saver.flush()
+    assert len(calls) == 1
+    time.sleep(0.1)
+    assert len(calls) == 1
+
+
+def test_debounced_saver_flush_without_pending_is_noop() -> None:
+    calls: list[ConfigData] = []
+    saver = DebouncedSaver(calls.append, delay=0.05)
+    saver.flush()
+    assert calls == []
+
