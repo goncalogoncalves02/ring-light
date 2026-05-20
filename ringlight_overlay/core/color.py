@@ -36,9 +36,7 @@ def kelvin_to_rgb(kelvin: int) -> tuple[int, int, int]:
     return (r, g, b)
 
 
-def apply_brightness(
-    rgb: tuple[int, int, int], brightness: float
-) -> tuple[int, int, int]:
+def apply_brightness(rgb: tuple[int, int, int], brightness: float) -> tuple[int, int, int]:
     """Scale RGB toward black by ``brightness`` (0.0 = black, 1.0 = unchanged)."""
     if not (0.0 <= brightness <= 1.0):
         raise ValueError(f"brightness must be in [0.0, 1.0], got {brightness!r}")

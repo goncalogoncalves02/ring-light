@@ -30,9 +30,7 @@ def test_default_config_has_one_disabled_daylight_ring() -> None:
     assert light.shape_params == {"thickness": 80}
 
 
-def test_config_path_uses_appdata(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_config_path_uses_appdata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APPDATA", str(tmp_path))
     expected = tmp_path / "RingLightOverlay" / "config.json"
     assert config_path() == expected
@@ -49,9 +47,7 @@ def test_save_and_load_roundtrip_equals_original(tmp_path: Path) -> None:
 def test_load_missing_file_returns_default(tmp_path: Path) -> None:
     missing = tmp_path / "does-not-exist.json"
     config = load_config(path=missing)
-    assert config == default_config().__class__.__name__ or isinstance(
-        config, ConfigData
-    )
+    assert config == default_config().__class__.__name__ or isinstance(config, ConfigData)
     assert isinstance(config, ConfigData)
     assert config.version == 1
 
@@ -95,4 +91,3 @@ def test_debounced_saver_flush_without_pending_is_noop() -> None:
     saver = DebouncedSaver(calls.append, delay=0.05)
     saver.flush()
     assert calls == []
-

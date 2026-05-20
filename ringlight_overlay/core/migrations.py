@@ -27,9 +27,7 @@ def migrate(raw: dict) -> dict:
     while version < CURRENT_VERSION:
         migration = MIGRATIONS.get(version)
         if migration is None:
-            raise ValueError(
-                f"No migration registered from version {version} to {version + 1}."
-            )
+            raise ValueError(f"No migration registered from version {version} to {version + 1}.")
         raw = migration(raw)
         version = raw.get("version")
     return raw

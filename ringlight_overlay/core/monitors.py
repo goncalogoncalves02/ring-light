@@ -24,9 +24,7 @@ def enumerate_monitors() -> list[MonitorInfo]:
 
     app = QGuiApplication.instance()
     if app is None:
-        raise RuntimeError(
-            "QGuiApplication must exist before calling enumerate_monitors()."
-        )
+        raise RuntimeError("QGuiApplication must exist before calling enumerate_monitors().")
 
     primary = app.primaryScreen()
     monitors: list[MonitorInfo] = []
@@ -43,9 +41,7 @@ def enumerate_monitors() -> list[MonitorInfo]:
     return monitors
 
 
-def match_monitor(
-    name: str, index: int, monitors: list[MonitorInfo]
-) -> tuple[MonitorInfo, int]:
+def match_monitor(name: str, index: int, monitors: list[MonitorInfo]) -> tuple[MonitorInfo, int]:
     """Resolve a stored (name, index) reference to a current MonitorInfo.
 
     Returns ``(monitor, fallback_level)`` where ``fallback_level`` is:

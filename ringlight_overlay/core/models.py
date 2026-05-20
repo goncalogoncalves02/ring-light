@@ -35,9 +35,7 @@ class Light:
 
     def __post_init__(self) -> None:
         if self.shape not in VALID_SHAPES:
-            raise ValueError(
-                f"shape must be one of {sorted(VALID_SHAPES)}, got {self.shape!r}"
-            )
+            raise ValueError(f"shape must be one of {sorted(VALID_SHAPES)}, got {self.shape!r}")
         if self.color_mode not in VALID_COLOR_MODES:
             raise ValueError(
                 f"color_mode must be one of {sorted(VALID_COLOR_MODES)}, "
@@ -55,9 +53,7 @@ class Light:
         if self.feather < 0:
             raise ValueError(f"feather must be >= 0, got {self.feather!r}")
         if self.monitor_index < 0:
-            raise ValueError(
-                f"monitor_index must be >= 0, got {self.monitor_index!r}"
-            )
+            raise ValueError(f"monitor_index must be >= 0, got {self.monitor_index!r}")
 
 
 @dataclass(slots=True)

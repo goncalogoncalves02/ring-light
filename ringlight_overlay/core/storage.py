@@ -181,4 +181,3 @@ class DebouncedSaver:
             self._pending = None
         if data is not None:
             self._save_fn(data)
-
