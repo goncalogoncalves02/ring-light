@@ -47,7 +47,6 @@ def test_save_and_load_roundtrip_equals_original(tmp_path: Path) -> None:
 def test_load_missing_file_returns_default(tmp_path: Path) -> None:
     missing = tmp_path / "does-not-exist.json"
     config = load_config(path=missing)
-    assert config == default_config().__class__.__name__ or isinstance(config, ConfigData)
     assert isinstance(config, ConfigData)
     assert config.version == 1
 
