@@ -91,9 +91,7 @@ class ProfileList(QWidget):
             item = QListWidgetItem(f"Light ({light.shape})")
             item.setData(Qt.ItemDataRole.UserRole, light.id)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(
-                Qt.CheckState.Checked if light.enabled else Qt.CheckState.Unchecked
-            )
+            item.setCheckState(Qt.CheckState.Checked if light.enabled else Qt.CheckState.Unchecked)
             self._light_list.addItem(item)
 
     def _active_profile(self) -> Profile | None:
@@ -152,10 +150,7 @@ class ProfileList(QWidget):
             self._replace_profile(Profile(id=profile.id, name=profile.name, lights=new_lights))
 
     def _replace_profile(self, new_profile: Profile) -> None:
-        new_profiles = [
-            new_profile if p.id == new_profile.id else p
-            for p in self._config.profiles
-        ]
+        new_profiles = [new_profile if p.id == new_profile.id else p for p in self._config.profiles]
         self._config = ConfigData(
             version=self._config.version,
             active_profile_id=self._config.active_profile_id,
@@ -198,9 +193,7 @@ class ProfileList(QWidget):
         profile = self._active_profile()
         if profile is None:
             return
-        name, ok = QInputDialog.getText(
-            self, "Rename Profile", "New name:", text=profile.name
-        )
+        name, ok = QInputDialog.getText(self, "Rename Profile", "New name:", text=profile.name)
         if not ok or not name.strip():
             return
         new_profile = Profile(id=profile.id, name=name.strip(), lights=profile.lights)

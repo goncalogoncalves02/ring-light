@@ -69,9 +69,7 @@ class MainWindow(QWidget):
     def _on_light_changed(self, light: Light) -> None:
         new_profiles = []
         for profile in self._config.profiles:
-            new_lights = [
-                light if l.id == light.id else l for l in profile.lights
-            ]
+            new_lights = [light if l.id == light.id else l for l in profile.lights]
             new_profiles.append(Profile(id=profile.id, name=profile.name, lights=new_lights))
         self._config = ConfigData(
             version=self._config.version,

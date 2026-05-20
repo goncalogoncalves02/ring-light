@@ -41,8 +41,7 @@ def test_profile_list_shows_profiles(qapp) -> None:
     config = _config()
     widget = ProfileList(config)
     profile_names = [
-        widget._profile_list.item(i).text()
-        for i in range(widget._profile_list.count())
+        widget._profile_list.item(i).text() for i in range(widget._profile_list.count())
     ]
     assert "Daylight" in profile_names
     assert "Night" in profile_names
