@@ -54,6 +54,8 @@ class TrayIcon(QSystemTrayIcon):
         menu.addSeparator()
         menu.addAction("Settings...").triggered.connect(self.show_settings_requested)
         menu.addAction("Quit").triggered.connect(self.quit_requested)
+        if old := self.contextMenu():
+            old.deleteLater()
         self.setContextMenu(menu)
 
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:

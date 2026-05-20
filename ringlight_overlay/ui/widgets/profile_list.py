@@ -9,14 +9,12 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
 from ringlight_overlay.core.models import ConfigData, Light, Profile
-from ringlight_overlay.core.storage import default_config
 
 
 class ProfileList(QWidget):
@@ -231,7 +229,7 @@ class ProfileList(QWidget):
         row = self._light_list.currentRow()
         if row < 0 or row >= len(profile.lights):
             return
-        new_lights = [l for i, l in enumerate(profile.lights) if i != row]
+        new_lights = [lt for i, lt in enumerate(profile.lights) if i != row]
         self._replace_profile(Profile(id=profile.id, name=profile.name, lights=new_lights))
         self._populate_lights(self._active_profile())
 

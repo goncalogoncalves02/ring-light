@@ -38,7 +38,6 @@ class ColorPicker(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
 
-        # Mode toggle
         mode_row = QHBoxLayout()
         self._rb_rgb = QRadioButton("RGB")
         self._rb_kelvin = QRadioButton("Kelvin")
@@ -51,11 +50,9 @@ class ColorPicker(QWidget):
         mode_row.addStretch()
         root.addLayout(mode_row)
 
-        # Stacked panel: RGB / Kelvin
         self._stack = QStackedWidget()
         root.addWidget(self._stack)
 
-        # --- RGB panel ---
         rgb_widget = QWidget()
         rgb_form = QFormLayout(rgb_widget)
         self._spin_r = QSpinBox()
@@ -69,7 +66,6 @@ class ColorPicker(QWidget):
         rgb_form.addRow("B:", self._spin_b)
         self._stack.addWidget(rgb_widget)
 
-        # --- Kelvin panel ---
         kelvin_widget = QWidget()
         kelvin_layout = QVBoxLayout(kelvin_widget)
         kelvin_layout.setContentsMargins(0, 0, 0, 0)
@@ -89,7 +85,6 @@ class ColorPicker(QWidget):
         kelvin_layout.addLayout(presets_row)
         self._stack.addWidget(kelvin_widget)
 
-        # --- Brightness + Opacity ---
         extra_form = QFormLayout()
 
         self._brightness_slider = QSlider(Qt.Orientation.Horizontal)
@@ -112,7 +107,6 @@ class ColorPicker(QWidget):
 
         root.addLayout(extra_form)
 
-        # Connect signals
         self._mode_group.idClicked.connect(self._on_mode_changed)
         self._kelvin_slider.valueChanged.connect(self._on_kelvin_slider_changed)
         self._brightness_slider.valueChanged.connect(self._on_brightness_changed)
@@ -120,8 +114,6 @@ class ColorPicker(QWidget):
         self._spin_r.valueChanged.connect(self._notify_change)
         self._spin_g.valueChanged.connect(self._notify_change)
         self._spin_b.valueChanged.connect(self._notify_change)
-
-    # ── public API ──────────────────────────────────────────────────────────
 
     def set_values(
         self,
@@ -168,8 +160,6 @@ class ColorPicker(QWidget):
 
     def opacity(self) -> float:
         return self._opacity_slider.value() / 100.0
-
-    # ── private ─────────────────────────────────────────────────────────────
 
     def _set_kelvin(self, kelvin: int) -> None:
         self._kelvin_slider.setValue(kelvin)
