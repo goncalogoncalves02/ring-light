@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
 from ringlight_overlay.core.models import Light, Profile
 from ringlight_overlay.core.monitors import MonitorInfo
 from ringlight_overlay.overlay.overlay_manager import OverlayManager
@@ -73,8 +71,9 @@ def test_disabled_light_window_is_hidden(qapp) -> None:
 
 def test_close_all_removes_all_windows(qapp) -> None:
     manager = OverlayManager()
-    for _ in range(3):
-        profile = Profile(id="p-1", name="T", lights=[_light()])
-        manager.apply_profile(profile, [_monitor()])
+    lights = [_light() for _ in range(3)]
+    profile = Profile(id="p-1", name="T", lights=lights)
+    manager.apply_profile(profile, [_monitor()])
+    assert manager.window_count == 3
     manager.close_all()
     assert manager.window_count == 0

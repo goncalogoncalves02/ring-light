@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import ctypes.wintypes
 
 GWL_EXSTYLE = -20
 WS_EX_LAYERED = 0x00080000
@@ -11,6 +12,10 @@ WS_EX_NOACTIVATE = 0x08000000
 _CLICK_THROUGH_FLAGS = WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
 
 _user32 = ctypes.windll.user32
+_user32.GetWindowLongPtrW.restype = ctypes.c_ssize_t
+_user32.GetWindowLongPtrW.argtypes = [ctypes.wintypes.HWND, ctypes.c_int]
+_user32.SetWindowLongPtrW.restype = ctypes.c_ssize_t
+_user32.SetWindowLongPtrW.argtypes = [ctypes.wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
 
 
 def apply_click_through(hwnd: int) -> None:

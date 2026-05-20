@@ -51,7 +51,8 @@ class RingShape(Shape):
         if feather > 0:
             grad = QRadialGradient(QPointF(cx, cy), max(rx, ry))
             mid = 1.0 - (inset / max(rx, ry))
-            feather_frac = min(feather / max(rx, ry), 0.15)
+            max_feather_frac = (1.0 - mid) / 2.0
+            feather_frac = min(feather / max(rx, ry), 0.15, max_feather_frac)
             alpha_color = QColor(color)
             alpha_color.setAlpha(0)
             grad.setColorAt(0.0, alpha_color)

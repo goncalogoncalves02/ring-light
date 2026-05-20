@@ -54,6 +54,9 @@ class OverlayManager:
         light: Light,
         monitors: list[MonitorInfo],
     ) -> None:
+        if not monitors:
+            _log.warning("No monitors available — skipping position for light %s", light.id)
+            return
         monitor, level = match_monitor(light.monitor_name, light.monitor_index, monitors)
         if level > 0:
             _log.warning(
