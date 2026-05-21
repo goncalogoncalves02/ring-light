@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
+from dataclasses import replace
+from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
-from ringlight_overlay.core.models import ConfigData, Light, Profile
+from ringlight_overlay.core.models import ConfigData, Profile
 from ringlight_overlay.core.monitors import enumerate_monitors
 from ringlight_overlay.core.storage import DebouncedSaver, load_config, save_config
 from ringlight_overlay.overlay.overlay_manager import OverlayManager
@@ -16,9 +19,6 @@ _log = logging.getLogger(__name__)
 
 
 def _configure_logging() -> None:
-    import os
-    from pathlib import Path
-
     log_dir = Path(os.environ.get("APPDATA", Path.home())) / "RingLightOverlay"
     log_dir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
@@ -47,33 +47,10 @@ def _toggle_all_lights(config: ConfigData) -> ConfigData:
     if profile is None:
         return config
     any_enabled = any(lt.enabled for lt in profile.lights)
-    new_lights = [
-        Light(
-            id=lt.id,
-            enabled=not any_enabled,
-            monitor_name=lt.monitor_name,
-            monitor_index=lt.monitor_index,
-            shape=lt.shape,
-            position=lt.position,
-            size=lt.size,
-            color_mode=lt.color_mode,
-            color_rgb=lt.color_rgb,
-            color_kelvin=lt.color_kelvin,
-            brightness=lt.brightness,
-            opacity=lt.opacity,
-            feather=lt.feather,
-            shape_params=lt.shape_params,
-        )
-        for lt in profile.lights
-    ]
-    new_profile = Profile(id=profile.id, name=profile.name, lights=new_lights)
+    new_lights = [replace(lt, enabled=not any_enabled) for lt in profile.lights]
+    new_profile = replace(profile, lights=new_lights)
     new_profiles = [new_profile if p.id == profile.id else p for p in config.profiles]
-    return ConfigData(
-        version=config.version,
-        active_profile_id=config.active_profile_id,
-        profiles=new_profiles,
-        settings=config.settings,
-    )
+    return replace(config, profiles=new_profiles)
 
 
 # ── App entry point ────────────────────────────────────────────────────────────────────────────
@@ -118,12 +95,7 @@ def main() -> int:
 
     def _on_profile_selected(profile_id: str) -> None:
         nonlocal config
-        config = ConfigData(
-            version=config.version,
-            active_profile_id=profile_id,
-            profiles=config.profiles,
-            settings=config.settings,
-        )
+        config = replace(config, active_profile_id=profile_id)
         saver.request_save(config)
         _reapply(config)
 
