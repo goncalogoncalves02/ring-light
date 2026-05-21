@@ -59,5 +59,7 @@ class TrayIcon(QSystemTrayIcon):
         self.setContextMenu(menu)
 
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
-        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.show_settings_requested.emit()
+        elif reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self.toggle_all_requested.emit()
