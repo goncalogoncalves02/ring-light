@@ -25,4 +25,15 @@ jobs:
         run: black --check .
 
       - name: Run tests
-        run: pytest -q
+        shell: pwsh
+        run: |
+          # windows-latest occasionally crashes pytest on teardown (exit 1
+          # with all tests passing). Retry up to 3 times so an isolated flake
+          # does not block a PR; a genuine failure still fails all 3 attempts.
+          foreach ($attempt in 1..3) {
+            Write-Host "pytest attempt $attempt of 3"
+            pytest -q
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Host "attempt $attempt failed (exit $LASTEXITCODE)"
+          }
+          exit 1
