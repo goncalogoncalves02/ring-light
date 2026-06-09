@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from ringlight_overlay.app import _active_profile, _toggle_all_lights
+from ringlight_overlay.app import _active_profile, _scale_profile_brightness, _toggle_all_lights
 from ringlight_overlay.core.models import ConfigData, Light, Profile
 
 
@@ -79,3 +79,61 @@ def test_toggle_all_lights_noop_on_empty_profile(qapp) -> None:
     config = _config(lights=[])
     result = _toggle_all_lights(config)
     assert result.active_profile_id == config.active_profile_id
+
+
+# --- _scale_profile_brightness ---
+
+
+def _make_profile_with_brightness(brightness: float) -> Profile:
+    from ringlight_overlay.core.models import Light
+    import uuid
+    light = Light(
+        id=str(uuid.uuid4()),
+        enabled=True,
+        monitor_name="",
+        monitor_index=0,
+        shape="ring",
+        position=(0.5, 0.5),
+        size=(800, 800),
+        color_mode="kelvin",
+        color_rgb=(255, 240, 220),
+        color_kelvin=5600,
+        brightness=brightness,
+        opacity=0.9,
+        feather=10,
+        shape_params={},
+    )
+    return Profile(id=str(uuid.uuid4()), name="Test", lights=[light])
+
+
+def test_scale_profile_brightness_scales_lights() -> None:
+    profile = _make_profile_with_brightness(0.8)
+    scaled = _scale_profile_brightness(profile, 0.5)
+    assert abs(scaled.lights[0].brightness - 0.4) < 1e-9
+
+
+def test_scale_profile_brightness_clamps_above_one() -> None:
+    profile = _make_profile_with_brightness(0.9)
+    scaled = _scale_profile_brightness(profile, 2.0)
+    assert scaled.lights[0].brightness == 1.0
+
+
+def test_scale_profile_brightness_clamps_to_zero() -> None:
+    profile = _make_profile_with_brightness(0.8)
+    scaled = _scale_profile_brightness(profile, 0.0)
+    assert scaled.lights[0].brightness == 0.0
+
+
+def test_scale_profile_brightness_returns_new_object() -> None:
+    profile = _make_profile_with_brightness(0.8)
+    scaled = _scale_profile_brightness(profile, 0.5)
+    assert scaled is not profile
+    assert scaled.lights[0] is not profile.lights[0]
+    assert profile.lights[0].brightness == 0.8  # original unchanged
+
+
+def test_scale_profile_brightness_preserves_id_and_name() -> None:
+    profile = _make_profile_with_brightness(0.8)
+    scaled = _scale_profile_brightness(profile, 0.5)
+    assert scaled.id == profile.id
+    assert scaled.name == profile.name
