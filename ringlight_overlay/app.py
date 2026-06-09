@@ -6,6 +6,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
 from ringlight_overlay.core.models import ConfigData, Profile
@@ -56,7 +57,7 @@ def _toggle_all_lights(config: ConfigData) -> ConfigData:
 
 _BRIGHTNESS_STEP = 0.05
 _BRIGHTNESS_MIN  = 0.05
-_BRIGHTNESS_MAX  = 1.0
+_BRIGHTNESS_MAX  = 2.0
 
 
 def _scale_profile_brightness(profile: Profile, multiplier: float) -> Profile:
@@ -113,6 +114,8 @@ def main() -> int:
             )
 
     def _on_config_changed(new_config: ConfigData) -> None:
+        nonlocal brightness_multiplier
+        brightness_multiplier = 1.0
         _reapply(new_config)
         hotkey_manager.reload(new_config)
         _log.debug("Config changed via settings window")
@@ -154,7 +157,7 @@ def main() -> int:
         if not config.profiles:
             return
         ids = [p.id for p in config.profiles]
-        idx = ids.index(config.active_profile_id) if config.active_profile_id in ids else 0
+        idx = ids.index(config.active_profile_id) if config.active_profile_id in ids else -1
         config = replace(config, active_profile_id=ids[(idx - 1) % len(ids)])
         saver.request_save(config)
         _reapply(config)
@@ -180,12 +183,12 @@ def main() -> int:
     tray.next_profile_requested.connect(_on_next_profile)
     tray.prev_profile_requested.connect(_on_prev_profile)
 
-    hotkey_manager.toggle_all_requested.connect(_on_toggle_all)
-    hotkey_manager.brightness_up_requested.connect(_on_brightness_up)
-    hotkey_manager.brightness_down_requested.connect(_on_brightness_down)
-    hotkey_manager.next_profile_requested.connect(_on_next_profile)
-    hotkey_manager.prev_profile_requested.connect(_on_prev_profile)
-    hotkey_manager.show_settings_requested.connect(_on_show_settings)
+    hotkey_manager.toggle_all_requested.connect(_on_toggle_all, Qt.ConnectionType.QueuedConnection)
+    hotkey_manager.brightness_up_requested.connect(_on_brightness_up, Qt.ConnectionType.QueuedConnection)
+    hotkey_manager.brightness_down_requested.connect(_on_brightness_down, Qt.ConnectionType.QueuedConnection)
+    hotkey_manager.next_profile_requested.connect(_on_next_profile, Qt.ConnectionType.QueuedConnection)
+    hotkey_manager.prev_profile_requested.connect(_on_prev_profile, Qt.ConnectionType.QueuedConnection)
+    hotkey_manager.show_settings_requested.connect(_on_show_settings, Qt.ConnectionType.QueuedConnection)
 
     tray.show()
     _log.info("Tray icon ready -- entering event loop")
