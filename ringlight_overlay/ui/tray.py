@@ -20,6 +20,8 @@ class TrayIcon(QSystemTrayIcon):
     toggle_all_requested = Signal()
     brightness_up_requested = Signal()
     brightness_down_requested = Signal()
+    next_profile_requested = Signal()
+    prev_profile_requested = Signal()
     show_settings_requested = Signal()
     quit_requested = Signal()
 
