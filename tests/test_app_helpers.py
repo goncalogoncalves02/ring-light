@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 
 from ringlight_overlay.app import _active_profile, _scale_profile_brightness, _toggle_all_lights
 from ringlight_overlay.core.models import ConfigData, Light, Profile
@@ -85,25 +86,7 @@ def test_toggle_all_lights_noop_on_empty_profile(qapp) -> None:
 
 
 def _make_profile_with_brightness(brightness: float) -> Profile:
-    from ringlight_overlay.core.models import Light
-    import uuid
-    light = Light(
-        id=str(uuid.uuid4()),
-        enabled=True,
-        monitor_name="",
-        monitor_index=0,
-        shape="ring",
-        position=(0.5, 0.5),
-        size=(800, 800),
-        color_mode="kelvin",
-        color_rgb=(255, 240, 220),
-        color_kelvin=5600,
-        brightness=brightness,
-        opacity=0.9,
-        feather=10,
-        shape_params={},
-    )
-    return Profile(id=str(uuid.uuid4()), name="Test", lights=[light])
+    return Profile(id=str(uuid.uuid4()), name="Test", lights=[replace(_light(), brightness=brightness)])
 
 
 def test_scale_profile_brightness_scales_lights() -> None:
