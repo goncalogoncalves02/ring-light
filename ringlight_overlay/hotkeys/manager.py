@@ -13,8 +13,12 @@ _log = logging.getLogger(__name__)
 _IS_WINDOWS = sys.platform == "win32"
 
 _ACTIONS = (
-    "toggle_all", "brightness_up", "brightness_down",
-    "next_profile", "prev_profile", "show_settings",
+    "toggle_all",
+    "brightness_up",
+    "brightness_down",
+    "next_profile",
+    "prev_profile",
+    "show_settings",
 )
 
 
@@ -48,11 +52,11 @@ class HotkeyManager(QObject):
             return
         hotkeys: dict[str, str] = config.settings.get("hotkeys", {})
         signal_map = {
-            "toggle_all":    self.toggle_all_requested,
+            "toggle_all": self.toggle_all_requested,
             "brightness_up": self.brightness_up_requested,
             "brightness_down": self.brightness_down_requested,
-            "next_profile":  self.next_profile_requested,
-            "prev_profile":  self.prev_profile_requested,
+            "next_profile": self.next_profile_requested,
+            "prev_profile": self.prev_profile_requested,
             "show_settings": self.show_settings_requested,
         }
         for action in _ACTIONS:
@@ -62,9 +66,7 @@ class HotkeyManager(QObject):
                 continue
             self._register_one(action, hotkey_str, signal_map[action].emit)
 
-    def _register_one(
-        self, action: str, hotkey_str: str, callback: Callable[[], None]
-    ) -> None:
+    def _register_one(self, action: str, hotkey_str: str, callback: Callable[[], None]) -> None:
         try:
             handle = keyboard.add_hotkey(hotkey_str, callback, suppress=False)
             self._handles[action] = handle

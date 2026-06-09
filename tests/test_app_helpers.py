@@ -86,7 +86,9 @@ def test_toggle_all_lights_noop_on_empty_profile(qapp) -> None:
 
 
 def _make_profile_with_brightness(brightness: float) -> Profile:
-    return Profile(id=str(uuid.uuid4()), name="Test", lights=[replace(_light(), brightness=brightness)])
+    return Profile(
+        id=str(uuid.uuid4()), name="Test", lights=[replace(_light(), brightness=brightness)]
+    )
 
 
 def test_scale_profile_brightness_scales_lights() -> None:

@@ -56,8 +56,8 @@ def _toggle_all_lights(config: ConfigData) -> ConfigData:
 
 
 _BRIGHTNESS_STEP = 0.05
-_BRIGHTNESS_MIN  = 0.05
-_BRIGHTNESS_MAX  = 2.0
+_BRIGHTNESS_MIN = 0.05
+_BRIGHTNESS_MAX = 2.0
 
 
 def _scale_profile_brightness(profile: Profile, multiplier: float) -> Profile:
@@ -184,11 +184,21 @@ def main() -> int:
     tray.prev_profile_requested.connect(_on_prev_profile)
 
     hotkey_manager.toggle_all_requested.connect(_on_toggle_all, Qt.ConnectionType.QueuedConnection)
-    hotkey_manager.brightness_up_requested.connect(_on_brightness_up, Qt.ConnectionType.QueuedConnection)
-    hotkey_manager.brightness_down_requested.connect(_on_brightness_down, Qt.ConnectionType.QueuedConnection)
-    hotkey_manager.next_profile_requested.connect(_on_next_profile, Qt.ConnectionType.QueuedConnection)
-    hotkey_manager.prev_profile_requested.connect(_on_prev_profile, Qt.ConnectionType.QueuedConnection)
-    hotkey_manager.show_settings_requested.connect(_on_show_settings, Qt.ConnectionType.QueuedConnection)
+    hotkey_manager.brightness_up_requested.connect(
+        _on_brightness_up, Qt.ConnectionType.QueuedConnection
+    )
+    hotkey_manager.brightness_down_requested.connect(
+        _on_brightness_down, Qt.ConnectionType.QueuedConnection
+    )
+    hotkey_manager.next_profile_requested.connect(
+        _on_next_profile, Qt.ConnectionType.QueuedConnection
+    )
+    hotkey_manager.prev_profile_requested.connect(
+        _on_prev_profile, Qt.ConnectionType.QueuedConnection
+    )
+    hotkey_manager.show_settings_requested.connect(
+        _on_show_settings, Qt.ConnectionType.QueuedConnection
+    )
 
     tray.show()
     _log.info("Tray icon ready -- entering event loop")
