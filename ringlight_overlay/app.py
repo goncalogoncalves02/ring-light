@@ -172,7 +172,7 @@ def main() -> int:
 
     win.config_changed.connect(_on_config_changed)
     tray.profile_selected.connect(_on_profile_selected)
-    tray.show_settings_requested.connect(win.show)
+    tray.show_settings_requested.connect(_on_show_settings)
     tray.toggle_all_requested.connect(_on_toggle_all)
     tray.quit_requested.connect(_quit)
     tray.brightness_up_requested.connect(_on_brightness_up)
