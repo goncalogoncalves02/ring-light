@@ -55,6 +55,7 @@ class MainWindow(QWidget):
         root.addWidget(self._minimize_checkbox)
 
         self._profile_list.light_selected.connect(self._on_light_selected)
+        self._profile_list.profile_selected.connect(self._on_profile_selected)
         self._profile_list.config_changed.connect(self._on_config_changed)
         self._light_editor.light_changed.connect(self._on_light_changed)
         self._minimize_checkbox.toggled.connect(self._on_minimize_toggled)
@@ -100,6 +101,14 @@ class MainWindow(QWidget):
             self._light_editor.load_light(light)
         else:
             self._light_editor.clear()
+
+    def _on_profile_selected(self, profile_id: str) -> None:
+        if profile_id == self._config.active_profile_id:
+            return
+        self._config = replace(self._config, active_profile_id=profile_id)
+        self._saver.request_save(self._config)
+        self.config_changed.emit(self._config)
+        _log.debug("Active profile changed via profile list — %s", profile_id)
 
     def _on_config_changed(self, config: ConfigData) -> None:
         self._config = config

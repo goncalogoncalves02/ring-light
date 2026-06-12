@@ -210,6 +210,31 @@ def test_apply_external_config_reflects_checkbox_state(qapp) -> None:
     assert item.checkState() == Qt.CheckState.Checked
 
 
+def _two_profile_config() -> ConfigData:
+    base = _config()
+    second = Profile(id=str(uuid.uuid4()), name="Night")
+    return replace(base, profiles=[base.profiles[0], second])
+
+
+def test_selecting_profile_in_list_switches_active_profile(qapp) -> None:
+    """Choosing a profile in the window's list must switch the active profile.
+
+    Regression: ProfileList emitted profile_selected but MainWindow never wired
+    it, so the overlay/tray never followed a profile change made in the window.
+    """
+    config = _two_profile_config()
+    win = MainWindow(config)
+    emitted: list[ConfigData] = []
+    win.config_changed.connect(emitted.append)
+
+    second_id = config.profiles[1].id
+    win._profile_list._profile_list.setCurrentRow(1)
+
+    assert emitted, "selecting a profile in the list must propagate to config_changed"
+    assert win.config().active_profile_id == second_id
+    assert emitted[-1].active_profile_id == second_id
+
+
 def test_external_toggle_then_edit_preserves_enabled(qapp) -> None:
     """End-to-end gap: toggle on via tray, then edit a slider -> stays enabled."""
     config = _config()  # enabled False
