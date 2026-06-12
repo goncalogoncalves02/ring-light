@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QSplitter, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QSplitter, QVBoxLayout, QWidget
 
 from ringlight_overlay.core.models import ConfigData, Light, Profile
 from ringlight_overlay.core.storage import DebouncedSaver, save_config
@@ -17,11 +17,17 @@ class MainWindow(QWidget):
     """Settings window: profile + light sidebar on left, editor on right."""
 
     config_changed = Signal(object)
+    quit_requested = Signal()
 
-    def __init__(self, config: ConfigData, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        config: ConfigData,
+        saver: DebouncedSaver | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._config = config
-        self._saver = DebouncedSaver(save_config)
+        self._saver = saver if saver is not None else DebouncedSaver(save_config)
         self._build_ui()
         self.setWindowTitle("RingLight Overlay — Settings")
         self.setMinimumSize(800, 500)
@@ -42,16 +48,25 @@ class MainWindow(QWidget):
 
         root.addWidget(splitter)
 
+        checked = self._config.settings.get("minimize_to_tray_on_close", True)
+        self._minimize_checkbox = QCheckBox("Minimize to tray on close")
+        self._minimize_checkbox.setChecked(bool(checked))
+        root.addWidget(self._minimize_checkbox)
+
         self._profile_list.light_selected.connect(self._on_light_selected)
         self._profile_list.config_changed.connect(self._on_config_changed)
         self._light_editor.light_changed.connect(self._on_light_changed)
+        self._minimize_checkbox.toggled.connect(self._on_minimize_toggled)
 
     def config(self) -> ConfigData:
         return self._config
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         event.ignore()
-        self.hide()
+        if self._config.settings.get("minimize_to_tray_on_close", True):
+            self.hide()
+        else:
+            self.quit_requested.emit()
 
     def _on_light_selected(self, light_id: str) -> None:
         light = self._find_light(light_id)
@@ -80,6 +95,18 @@ class MainWindow(QWidget):
         self._saver.request_save(self._config)
         self.config_changed.emit(self._config)
         _log.debug("Config updated via light editor — light %s", light.id)
+
+    def _on_minimize_toggled(self, checked: bool) -> None:
+        new_settings = {**self._config.settings, "minimize_to_tray_on_close": checked}
+        self._config = ConfigData(
+            version=self._config.version,
+            active_profile_id=self._config.active_profile_id,
+            profiles=self._config.profiles,
+            settings=new_settings,
+        )
+        self._saver.request_save(self._config)
+        self.config_changed.emit(self._config)
+        _log.debug("minimize_to_tray_on_close toggled to %s", checked)
 
     def _find_light(self, light_id: str) -> Light | None:
         for profile in self._config.profiles:
