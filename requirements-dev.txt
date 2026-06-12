@@ -3,3 +3,4 @@ keyboard
 pyinstaller
 pytest
 black
+pillow
