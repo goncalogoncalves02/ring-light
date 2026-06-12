@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from unittest.mock import MagicMock
 
 from PySide6.QtCore import Qt
@@ -137,3 +138,88 @@ def test_main_window_close_emits_quit_requested_when_minimize_to_tray_false(qapp
 def test_main_window_has_quit_requested_signal(qapp) -> None:
     win = MainWindow(_config())
     assert hasattr(win, "quit_requested")
+
+
+def _enabled_config() -> ConfigData:
+    """Config with the single light enabled (as if turned on via the checkbox)."""
+    config = _config()
+    on_light = replace(config.profiles[0].lights[0], enabled=True)
+    profile = replace(config.profiles[0], lights=[on_light])
+    return replace(config, profiles=[profile])
+
+
+def test_editing_light_preserves_enabled_state(qapp) -> None:
+    """Regression: editing a property must not clobber the live ``enabled`` flag.
+
+    The LightEditor rebuilds the whole Light from a snapshot whose ``enabled``
+    can be stale (it has no editor widget). MainWindow must preserve the live
+    enabled state from its own config, so moving a slider never turns the
+    overlay off.
+    """
+    config = _enabled_config()
+    win = MainWindow(config)
+    emitted: list[ConfigData] = []
+    win.config_changed.connect(emitted.append)
+
+    # Editor emits an edited light carrying a STALE enabled=False plus a real edit.
+    edited = replace(config.profiles[0].lights[0], enabled=False, feather=99)
+    win._on_light_changed(edited)
+
+    result_light = win.config().profiles[0].lights[0]
+    assert result_light.enabled is True, "enabled was clobbered by an editor edit"
+    assert result_light.feather == 99, "the edited value was not applied"
+    assert emitted[-1].profiles[0].lights[0].enabled is True
+
+
+def test_editing_light_applies_visual_fields(qapp) -> None:
+    """The merged light reflects every editor-owned field (here: size + opacity)."""
+    config = _enabled_config()
+    win = MainWindow(config)
+    edited = replace(config.profiles[0].lights[0], size=(640, 480), opacity=0.5)
+    win._on_light_changed(edited)
+    result_light = win.config().profiles[0].lights[0]
+    assert result_light.size == (640, 480)
+    assert result_light.opacity == 0.5
+
+
+def _with_light_enabled(config: ConfigData, enabled: bool) -> ConfigData:
+    light = replace(config.profiles[0].lights[0], enabled=enabled)
+    profile = replace(config.profiles[0], lights=[light])
+    return replace(config, profiles=[profile])
+
+
+def test_apply_external_config_updates_config_without_emitting(qapp) -> None:
+    """A config changed elsewhere (tray/hotkey) is reflected without re-emitting."""
+    config = _config()  # enabled False
+    win = MainWindow(config)
+    emitted: list[ConfigData] = []
+    win.config_changed.connect(emitted.append)
+
+    win.apply_external_config(_with_light_enabled(config, True))
+
+    assert win.config().profiles[0].lights[0].enabled is True
+    assert emitted == [], "external refresh must not re-emit config_changed"
+
+
+def test_apply_external_config_reflects_checkbox_state(qapp) -> None:
+    """The profile-list light checkbox mirrors the externally-toggled enabled."""
+    config = _config()  # enabled False
+    win = MainWindow(config)
+    win.apply_external_config(_with_light_enabled(config, True))
+    item = win._profile_list._light_list.item(0)
+    assert item.checkState() == Qt.CheckState.Checked
+
+
+def test_external_toggle_then_edit_preserves_enabled(qapp) -> None:
+    """End-to-end gap: toggle on via tray, then edit a slider -> stays enabled."""
+    config = _config()  # enabled False
+    win = MainWindow(config)
+    win.apply_external_config(_with_light_enabled(config, True))  # tray Toggle All
+
+    # Editor still holds a stale enabled=False snapshot; user moves a slider.
+    edited = replace(config.profiles[0].lights[0], enabled=False, feather=42)
+    win._on_light_changed(edited)
+
+    result_light = win.config().profiles[0].lights[0]
+    assert result_light.enabled is True
+    assert result_light.feather == 42
