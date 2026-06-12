@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
 from ringlight_overlay.core.models import ConfigData, Profile
 from ringlight_overlay.core.monitors import enumerate_monitors
-from ringlight_overlay.core.storage import DebouncedSaver, load_config, save_config
+from ringlight_overlay.core.storage import DebouncedSaver, is_first_run, load_config, save_config
 from ringlight_overlay.hotkeys.manager import HotkeyManager
 from ringlight_overlay.overlay.overlay_manager import OverlayManager
 from ringlight_overlay.ui.main_window import MainWindow
@@ -85,13 +85,19 @@ def main() -> int:
         _log.error("No system tray available -- cannot run")
         return 1
 
+    first_run = is_first_run()
+
     config = load_config()
+
+    if first_run:
+        save_config(config)
+
     monitors = enumerate_monitors()
 
     overlay_mgr = OverlayManager()
     tray = TrayIcon(profiles=config.profiles, active_profile_id=config.active_profile_id)
-    win = MainWindow(config)
     saver = DebouncedSaver(save_config)
+    win = MainWindow(config, saver=saver)
 
     brightness_multiplier: float = 1.0
     hotkey_manager = HotkeyManager(config, parent=app)
@@ -167,21 +173,23 @@ def main() -> int:
         win.activateWindow()
         win.raise_()
 
-    def _quit() -> None:
+    def _shutdown() -> None:
         hotkey_manager.shutdown()
         saver.flush()
         overlay_mgr.close_all()
-        app.quit()
+
+    app.aboutToQuit.connect(_shutdown)
 
     win.config_changed.connect(_on_config_changed)
     tray.profile_selected.connect(_on_profile_selected)
     tray.show_settings_requested.connect(_on_show_settings)
     tray.toggle_all_requested.connect(_on_toggle_all)
-    tray.quit_requested.connect(_quit)
+    tray.quit_requested.connect(app.quit)
     tray.brightness_up_requested.connect(_on_brightness_up)
     tray.brightness_down_requested.connect(_on_brightness_down)
     tray.next_profile_requested.connect(_on_next_profile)
     tray.prev_profile_requested.connect(_on_prev_profile)
+    win.quit_requested.connect(app.quit)
 
     hotkey_manager.toggle_all_requested.connect(_on_toggle_all, Qt.ConnectionType.QueuedConnection)
     hotkey_manager.brightness_up_requested.connect(
@@ -202,5 +210,13 @@ def main() -> int:
 
     tray.show()
     _log.info("Tray icon ready -- entering event loop")
+
+    if first_run and tray.supportsMessages():
+        tray.showMessage(
+            "RingLight Overlay",
+            "RingLight Overlay running — click to configure",
+            QSystemTrayIcon.MessageIcon.Information,
+            5000,
+        )
 
     return app.exec()

@@ -25,6 +25,11 @@ def config_path() -> Path:
     return Path(base) / "RingLightOverlay" / "config.json"
 
 
+def is_first_run(path: Path | None = None) -> bool:
+    """Return True when no config file exists (i.e. the app has never saved state)."""
+    return not (path or config_path()).exists()
+
+
 def default_config() -> ConfigData:
     """First-run config: one Daylight profile with one disabled ring."""
     light = Light(

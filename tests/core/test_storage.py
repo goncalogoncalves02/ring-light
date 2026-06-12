@@ -9,6 +9,7 @@ from ringlight_overlay.core.storage import (
     DebouncedSaver,
     config_path,
     default_config,
+    is_first_run,
     load_config,
     save_config,
 )
@@ -83,6 +84,17 @@ def test_debounced_saver_flush_writes_immediately_and_clears_pending() -> None:
     assert len(calls) == 1
     time.sleep(0.1)
     assert len(calls) == 1
+
+
+def test_is_first_run_returns_true_when_file_missing(tmp_path: Path) -> None:
+    missing = tmp_path / "config.json"
+    assert is_first_run(missing) is True
+
+
+def test_is_first_run_returns_false_when_file_exists(tmp_path: Path) -> None:
+    existing = tmp_path / "config.json"
+    existing.write_text("{}", encoding="utf-8")
+    assert is_first_run(existing) is False
 
 
 def test_debounced_saver_flush_without_pending_is_noop() -> None:

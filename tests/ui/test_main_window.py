@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import uuid
+from unittest.mock import MagicMock
 
 from PySide6.QtCore import Qt
 
 from ringlight_overlay.core.models import ConfigData, Light, Profile
+from ringlight_overlay.core.storage import DebouncedSaver
 from ringlight_overlay.ui.main_window import MainWindow
 
 
-def _config() -> ConfigData:
+def _config(minimize_to_tray: bool | None = None) -> ConfigData:
     light = Light(
         id=str(uuid.uuid4()),
         enabled=False,
@@ -26,7 +28,12 @@ def _config() -> ConfigData:
         shape_params={"thickness": 80},
     )
     profile = Profile(id=str(uuid.uuid4()), name="Daylight", lights=[light])
-    return ConfigData(version=1, active_profile_id=profile.id, profiles=[profile])
+    settings: dict = {}
+    if minimize_to_tray is not None:
+        settings["minimize_to_tray_on_close"] = minimize_to_tray
+    return ConfigData(
+        version=1, active_profile_id=profile.id, profiles=[profile], settings=settings
+    )
 
 
 def test_main_window_constructs(qapp) -> None:
@@ -57,3 +64,76 @@ def test_main_window_exposes_config(qapp) -> None:
 def test_main_window_has_config_changed_signal(qapp) -> None:
     win = MainWindow(_config())
     assert hasattr(win, "config_changed")
+
+
+# Task 3: injected saver is used instead of creating a new instance
+def test_main_window_uses_injected_saver(qapp) -> None:
+    calls: list = []
+    spy_saver = DebouncedSaver(calls.append, delay=100.0)
+    win = MainWindow(_config(), saver=spy_saver)
+    # Trigger a config change via the light editor path indirectly by calling the handler
+    light = win.config().profiles[0].lights[0]
+    # Call the internal handler directly — simulates a light_changed signal
+    win._on_light_changed(light)
+    assert len(calls) == 0  # timer not fired yet
+    spy_saver.flush()
+    assert len(calls) == 1  # our injected saver, not a separate instance
+
+
+# Task 5: checkbox initialized from settings
+def test_main_window_checkbox_checked_when_setting_true(qapp) -> None:
+    win = MainWindow(_config(minimize_to_tray=True))
+    assert win._minimize_checkbox.isChecked() is True
+
+
+def test_main_window_checkbox_unchecked_when_setting_false(qapp) -> None:
+    win = MainWindow(_config(minimize_to_tray=False))
+    assert win._minimize_checkbox.isChecked() is False
+
+
+def test_main_window_checkbox_checked_by_default_when_setting_absent(qapp) -> None:
+    # settings dict has no minimize_to_tray_on_close key — default True
+    win = MainWindow(_config(minimize_to_tray=None))
+    assert win._minimize_checkbox.isChecked() is True
+
+
+# Task 7: toggling the checkbox emits config_changed with the updated setting
+def test_main_window_checkbox_toggle_emits_config_changed(qapp) -> None:
+    emitted: list[ConfigData] = []
+    win = MainWindow(_config(minimize_to_tray=True))
+    win.config_changed.connect(emitted.append)
+
+    # Toggle off
+    win._minimize_checkbox.setChecked(False)
+    assert len(emitted) == 1
+    assert emitted[0].settings["minimize_to_tray_on_close"] is False
+
+    # Toggle back on
+    win._minimize_checkbox.setChecked(True)
+    assert len(emitted) == 2
+    assert emitted[1].settings["minimize_to_tray_on_close"] is True
+
+
+# Task 9: close behavior depends on setting
+def test_main_window_close_hides_when_minimize_to_tray_true(qapp) -> None:
+    quit_signals: list = []
+    win = MainWindow(_config(minimize_to_tray=True))
+    win.quit_requested.connect(lambda: quit_signals.append(1))
+    win.show()
+    win.close()
+    assert not win.isVisible()
+    assert len(quit_signals) == 0
+
+
+def test_main_window_close_emits_quit_requested_when_minimize_to_tray_false(qapp) -> None:
+    quit_signals: list = []
+    win = MainWindow(_config(minimize_to_tray=False))
+    win.quit_requested.connect(lambda: quit_signals.append(1))
+    win.show()
+    win.close()
+    assert len(quit_signals) == 1
+
+
+def test_main_window_has_quit_requested_signal(qapp) -> None:
+    win = MainWindow(_config())
+    assert hasattr(win, "quit_requested")
