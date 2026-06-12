@@ -1,0 +1,11 @@
+# Normalize all text files to LF in the repository and the working tree,
+# on every platform. Keeps cross-platform development consistent (the app
+# ships for Windows but is developed on WSL/Linux).
+* text=auto eol=lf
+
+# Binary assets — never apply line-ending conversion.
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.gif binary
