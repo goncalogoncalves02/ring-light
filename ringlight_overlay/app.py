@@ -131,12 +131,14 @@ def main() -> int:
         config = replace(config, active_profile_id=profile_id)
         saver.request_save(config)
         _reapply(config)
+        win.apply_external_config(config)
 
     def _on_toggle_all() -> None:
         nonlocal config
         config = _toggle_all_lights(config)
         saver.request_save(config)
         _reapply(config)
+        win.apply_external_config(config)
 
     def _on_brightness_up() -> None:
         nonlocal brightness_multiplier
@@ -157,6 +159,7 @@ def main() -> int:
         config = replace(config, active_profile_id=ids[(idx + 1) % len(ids)])
         saver.request_save(config)
         _reapply(config)
+        win.apply_external_config(config)
 
     def _on_prev_profile() -> None:
         nonlocal config
@@ -167,6 +170,7 @@ def main() -> int:
         config = replace(config, active_profile_id=ids[(idx - 1) % len(ids)])
         saver.request_save(config)
         _reapply(config)
+        win.apply_external_config(config)
 
     def _on_show_settings() -> None:
         win.show()

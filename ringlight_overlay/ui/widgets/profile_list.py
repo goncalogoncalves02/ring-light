@@ -67,6 +67,24 @@ class ProfileList(QWidget):
         self._btn_add_light.clicked.connect(self._add_light)
         self._btn_remove_light.clicked.connect(self._remove_light)
 
+    def apply_external_config(self, config: ConfigData) -> None:
+        """Refresh the sidebar to reflect a config changed elsewhere (tray/hotkey).
+
+        Repopulates with signals blocked so no handler fires and nothing is
+        re-emitted — the external source already persisted the change.
+        """
+        self._config = config
+        self._profile_list.blockSignals(True)
+        self._light_list.blockSignals(True)
+        try:
+            self._populate_profiles()
+            active = self._active_profile()
+            if active is not None:
+                self._populate_lights(active)
+        finally:
+            self._profile_list.blockSignals(False)
+            self._light_list.blockSignals(False)
+
     def _populate_profiles(self) -> None:
         self._profile_list.clear()
         for profile in self._config.profiles:

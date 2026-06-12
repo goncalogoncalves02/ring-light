@@ -18,3 +18,24 @@ def qapp():
     if app is None:
         app = QApplication([])
     yield app
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_qt_widgets():
+    """Close and delete any top-level widgets a test leaves behind.
+
+    Without this, PySide6 widgets linger until interpreter shutdown, where
+    destroying them alongside the QApplication intermittently segfaults on
+    windows-latest (exit code 0xC0000005). Runs after every test; a no-op when
+    no QApplication exists (pure non-Qt tests never instantiate one).
+    """
+    yield
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is None:
+        return
+    for widget in list(app.topLevelWidgets()):
+        widget.close()
+        widget.deleteLater()
+    app.processEvents()

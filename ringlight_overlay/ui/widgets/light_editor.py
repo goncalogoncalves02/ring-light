@@ -133,6 +133,9 @@ class LightEditor(QWidget):
         self._light = None
         self.setEnabled(False)
 
+    def current_light_id(self) -> str | None:
+        return self._light.id if self._light is not None else None
+
     def current_shape(self) -> str:
         return self._shape_combo.currentText()
 

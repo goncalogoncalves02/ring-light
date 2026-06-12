@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
+from unittest.mock import patch
 
+import pytest
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QSystemTrayIcon
 
 from ringlight_overlay.core.models import Profile
-from ringlight_overlay.ui.tray import TrayIcon
+from ringlight_overlay.ui.tray import TrayIcon, _app_icon
 
 
 def _profiles() -> list[Profile]:
@@ -54,3 +58,20 @@ def test_tray_update_profiles_replaces_menu(qapp) -> None:
     action_texts = [a.text() for a in menu.actions() if not a.isSeparator()]
     assert "Studio" in action_texts
     assert "Daylight" not in action_texts
+
+
+def test_tray_icon_uses_placeholder_when_file_absent(qapp, tmp_path: Path) -> None:
+    """When app_icon_path() points to a non-existent file, TrayIcon still
+    constructs successfully and its icon() is non-null (placeholder fallback)."""
+    absent = tmp_path / "nonexistent.ico"
+    with patch("ringlight_overlay.ui.tray.app_icon_path", return_value=absent):
+        profiles = _profiles()
+        tray = TrayIcon(profiles=profiles, active_profile_id=profiles[0].id)
+        assert tray is not None
+        assert not tray.icon().isNull()
+
+
+def test_app_icon_returns_qicon_instance(qapp) -> None:
+    """_app_icon() returns a QIcon regardless of whether the file is loadable."""
+    result = _app_icon()
+    assert isinstance(result, QIcon)

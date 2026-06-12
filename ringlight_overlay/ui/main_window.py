@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QSplitter, QVBoxLayout, QWidget
@@ -54,12 +55,38 @@ class MainWindow(QWidget):
         root.addWidget(self._minimize_checkbox)
 
         self._profile_list.light_selected.connect(self._on_light_selected)
+        self._profile_list.profile_selected.connect(self._on_profile_selected)
         self._profile_list.config_changed.connect(self._on_config_changed)
         self._light_editor.light_changed.connect(self._on_light_changed)
         self._minimize_checkbox.toggled.connect(self._on_minimize_toggled)
 
     def config(self) -> ConfigData:
         return self._config
+
+    def apply_external_config(self, config: ConfigData) -> None:
+        """Reflect a config changed outside the window (tray/hotkey) in the UI.
+
+        Updates the held config and child widgets without emitting
+        ``config_changed`` or saving — the external source already did both.
+        Keeps ``_on_light_changed`` merges (which preserve ``enabled``) anchored
+        on the live state regardless of where a toggle came from.
+        """
+        self._config = config
+
+        checked = bool(config.settings.get("minimize_to_tray_on_close", True))
+        self._minimize_checkbox.blockSignals(True)
+        self._minimize_checkbox.setChecked(checked)
+        self._minimize_checkbox.blockSignals(False)
+
+        self._profile_list.apply_external_config(config)
+
+        light_id = self._light_editor.current_light_id()
+        if light_id is not None:
+            light = self._find_light(light_id)
+            if light is not None:
+                self._light_editor.load_light(light)
+            else:
+                self._light_editor.clear()
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         event.ignore()
@@ -75,6 +102,14 @@ class MainWindow(QWidget):
         else:
             self._light_editor.clear()
 
+    def _on_profile_selected(self, profile_id: str) -> None:
+        if profile_id == self._config.active_profile_id:
+            return
+        self._config = replace(self._config, active_profile_id=profile_id)
+        self._saver.request_save(self._config)
+        self.config_changed.emit(self._config)
+        _log.debug("Active profile changed via profile list — %s", profile_id)
+
     def _on_config_changed(self, config: ConfigData) -> None:
         self._config = config
         self._saver.request_save(config)
@@ -84,7 +119,15 @@ class MainWindow(QWidget):
     def _on_light_changed(self, light: Light) -> None:
         new_profiles = []
         for profile in self._config.profiles:
-            new_lights = [light if l.id == light.id else l for l in profile.lights]
+            new_lights = []
+            for current in profile.lights:
+                if current.id == light.id:
+                    # `enabled` is owned by the profile-list checkbox, not the editor
+                    # (it has no editor widget). Preserve the live value so editing a
+                    # property never toggles the overlay off.
+                    new_lights.append(replace(light, enabled=current.enabled))
+                else:
+                    new_lights.append(current)
             new_profiles.append(Profile(id=profile.id, name=profile.name, lights=new_lights))
         self._config = ConfigData(
             version=self._config.version,
