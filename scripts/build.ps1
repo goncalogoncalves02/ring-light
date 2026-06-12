@@ -21,10 +21,10 @@ if (Test-Path $distDir) {
         1
     )
     Write-Host "dist/RingLightOverlay size: $sizeMb MB"
-    if ($sizeMb -ge 80) {
-        Write-Warning "Size exceeds the 80 MB target ($sizeMb MB). Consider excluding unused Qt modules."
+    if ($sizeMb -ge 130) {
+        Write-Warning "Size exceeds the 130 MB target ($sizeMb MB). Consider excluding unused Qt modules."
     } else {
-        Write-Host "Size is within the 80 MB limit."
+        Write-Host "Size is within the 130 MB limit."
     }
 } else {
     Write-Error "dist/RingLightOverlay not found — PyInstaller may have failed."

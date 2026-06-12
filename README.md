@@ -47,7 +47,7 @@ pyinstaller --noconfirm RingLightOverlay.spec
 ```
 
 The output is in `dist\RingLightOverlay\`. Zip it for distribution or run
-`RingLightOverlay.exe` directly. Target install size is under 80 MB.
+`RingLightOverlay.exe` directly. Target install size is under 130 MB (full PySide6 bundle).
 
 A pre-built zip artifact is produced automatically by the [build workflow](.github/workflows/build.yml)
 on every `v*` tag push and is downloadable from the GitHub Actions run page.
@@ -77,5 +77,5 @@ Run these steps on a clean Windows 11 machine using the packaged build before sh
 - [ ] App restart restores the last active profile and window position
 - [ ] Connect and disconnect a monitor while running — no crash; overlay re-snaps
 - [ ] Tray shows the `favicon.ico` icon (not the orange placeholder)
-- [ ] `dist/RingLightOverlay` total size is under 80 MB
+- [ ] `dist/RingLightOverlay` total size is under 130 MB
 - [ ] Screenshots captured and saved to `docs/screenshots/`

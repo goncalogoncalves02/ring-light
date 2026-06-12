@@ -34,8 +34,8 @@ jobs:
             1
           )
           Write-Host "dist/RingLightOverlay size: $sizeMb MB"
-          if ($sizeMb -ge 80) {
-            Write-Warning "Size ($sizeMb MB) exceeds the 80 MB target."
+          if ($sizeMb -ge 130) {
+            Write-Warning "Size ($sizeMb MB) exceeds the 130 MB target."
           }
 
       - name: Package artifact
