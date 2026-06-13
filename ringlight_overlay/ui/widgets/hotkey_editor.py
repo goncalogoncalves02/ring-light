@@ -28,11 +28,18 @@ _ACTION_LABELS: dict[str, str] = {
 }
 
 
-class _CaptureField(QLineEdit):
-    """Read-only key capture field.
+_IDLE_PLACEHOLDER = "Click to set…"
+_LISTENING_PLACEHOLDER = "Press keys…"
 
-    Intercepts keyPressEvent, converts the chord via qt_to_hotkey_string,
-    and emits ``chord_captured`` with the new string (or None for bare modifiers).
+
+class _CaptureField(QLineEdit):
+    """Read-only key capture field that only listens after the user clicks it.
+
+    Capture is *armed* on click (or programmatically via ``_start_listening``).
+    While armed, the next chord is converted via ``qt_to_hotkey_string`` and
+    emitted on ``chord_captured``. Merely receiving focus (e.g. the first field
+    on a tab) does NOT capture — that prevents stray keystrokes from rebinding.
+    Tab/Backtab/Escape cancel listening; losing focus restores the prior value.
     """
 
     chord_captured = Signal(object)  # str | None
@@ -40,27 +47,56 @@ class _CaptureField(QLineEdit):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setReadOnly(True)
-        self.setPlaceholderText("Click here, then press keys…")
+        self.setPlaceholderText(_IDLE_PLACEHOLDER)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self._listening = False
+        self._previous = ""
 
     def set_chord(self, chord: str) -> None:
         """Set the displayed chord without triggering a capture signal."""
         self.setText(chord)
 
+    def _start_listening(self) -> None:
+        self._previous = self.text()
+        self._listening = True
+        self.clear()
+        self.setPlaceholderText(_LISTENING_PLACEHOLDER)
+
+    def _stop_listening(self) -> None:
+        self._listening = False
+        self.setPlaceholderText(_IDLE_PLACEHOLDER)
+
+    def _cancel_listening(self) -> None:
+        self.setText(self._previous)
+        self._stop_listening()
+
+    def mousePressEvent(self, event) -> None:  # type: ignore[override]
+        if not self._listening:
+            self._start_listening()
+        super().mousePressEvent(event)
+
+    def focusOutEvent(self, event) -> None:  # type: ignore[override]
+        if self._listening:
+            self._cancel_listening()
+        super().focusOutEvent(event)
+
     def keyPressEvent(self, event) -> None:  # type: ignore[override]
-        key = Qt.Key(event.key())
-        # Let navigation/close keys pass through so the field doesn't trap focus:
-        # Tab/Backtab move focus, Escape closes the dialog. They are never bindings.
-        if key in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab, Qt.Key.Key_Escape):
+        if not self._listening:
+            # Idle: never capture; let navigation keys behave normally.
             super().keyPressEvent(event)
             return
-        modifiers = event.modifiers()
-        chord = qt_to_hotkey_string(modifiers, key)
+        key = Qt.Key(event.key())
+        # Tab/Backtab move focus, Escape aborts — cancel capture and pass through.
+        if key in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab, Qt.Key.Key_Escape):
+            self._cancel_listening()
+            super().keyPressEvent(event)
+            return
+        chord = qt_to_hotkey_string(event.modifiers(), key)
         if chord is not None:
             self.setText(chord)
+            self._stop_listening()
             self.chord_captured.emit(chord)
-        # Otherwise consume the event — a bare modifier or unrepresentable key
-        # should not type into the read-only field.
+        # else: bare modifier — stay armed, keep waiting for the full chord.
 
 
 class HotkeyEditor(QWidget):

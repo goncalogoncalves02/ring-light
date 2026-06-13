@@ -48,6 +48,26 @@ def test_main_window_has_minimum_size(qapp) -> None:
     assert win.minimumHeight() >= 500
 
 
+def test_main_window_populates_monitor_dropdown(qapp) -> None:
+    # The light editor's monitor combo must be filled from the live screen
+    # list (offscreen Qt always provides at least one screen), not left empty.
+    win = MainWindow(_config())
+    assert win._light_editor._monitor_combo.count() >= 1
+
+
+def test_main_window_editing_light_keeps_monitor_assignment(qapp) -> None:
+    # With monitors loaded, editing a property must not wipe monitor_name to "".
+    win = MainWindow(_config())
+    light = win.config().profiles[0].lights[0]
+    win._light_editor.load_light(light)
+    received: list = []
+    win.config_changed.connect(received.append)
+    win._light_editor._feather.setValue(20)
+    assert received, "editing a property should emit config_changed"
+    edited = received[-1].profiles[0].lights[0]
+    assert edited.monitor_name == win._light_editor._monitors[0].name
+
+
 def test_main_window_close_hides_not_destroys(qapp) -> None:
     win = MainWindow(_config())
     win.show()

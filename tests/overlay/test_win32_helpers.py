@@ -7,6 +7,7 @@ from ringlight_overlay.overlay.win32_helpers import (
     WS_EX_TOOLWINDOW,
     WS_EX_TRANSPARENT,
     apply_click_through,
+    set_app_user_model_id,
 )
 
 
@@ -25,3 +26,8 @@ def test_apply_click_through_accepts_zero_hwnd_as_noop() -> None:
 
 def test_apply_click_through_is_callable() -> None:
     assert callable(apply_click_through)
+
+
+def test_set_app_user_model_id_is_noop_off_windows() -> None:
+    # Off Windows (CI/dev) this must return without raising.
+    set_app_user_model_id("RingLightOverlay.App")

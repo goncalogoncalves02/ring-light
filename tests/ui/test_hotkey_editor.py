@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pytest
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QKeyEvent
 
 from ringlight_overlay.core.storage import default_config
 from ringlight_overlay.hotkeys.manager import _ACTIONS
@@ -9,6 +11,50 @@ from ringlight_overlay.ui.widgets.hotkey_editor import HotkeyEditor
 
 def _config():
     return default_config()
+
+
+def _key_event(key: Qt.Key, modifiers: Qt.KeyboardModifier) -> QKeyEvent:
+    return QKeyEvent(QEvent.Type.KeyPress, key, modifiers)
+
+
+_CTRL_ALT = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier
+
+
+class TestCaptureFieldArming:
+    def test_focused_field_does_not_capture_until_armed(self, qapp):
+        editor = HotkeyEditor(_config())
+        field = editor._fields["toggle_all"]
+        original = field.text()
+        captured: list = []
+        field.chord_captured.connect(captured.append)
+
+        # Merely having focus must NOT capture — the field is idle until clicked.
+        field.keyPressEvent(_key_event(Qt.Key.Key_L, _CTRL_ALT))
+        assert captured == []
+        assert field.text() == original
+
+    def test_captures_after_arming(self, qapp):
+        editor = HotkeyEditor(_config())
+        field = editor._fields["toggle_all"]
+        captured: list = []
+        field.chord_captured.connect(captured.append)
+
+        field._start_listening()  # simulates a click into the field
+        field.keyPressEvent(_key_event(Qt.Key.Key_L, _CTRL_ALT))
+        assert captured == ["ctrl+alt+l"]
+        assert field.text() == "ctrl+alt+l"
+
+    def test_escape_cancels_and_restores_previous(self, qapp):
+        editor = HotkeyEditor(_config())
+        field = editor._fields["toggle_all"]
+        original = field.text()
+        captured: list = []
+        field.chord_captured.connect(captured.append)
+
+        field._start_listening()
+        field.keyPressEvent(_key_event(Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier))
+        assert captured == []
+        assert field.text() == original
 
 
 class TestHotkeyEditorConstruction:

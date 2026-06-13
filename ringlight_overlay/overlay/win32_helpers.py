@@ -35,3 +35,18 @@ def apply_click_through(hwnd: int) -> None:
         return
     current: int = _user32.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)
     _user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, current | _CLICK_THROUGH_FLAGS)
+
+
+def set_app_user_model_id(app_id: str) -> None:
+    """Set an explicit AppUserModelID for this process.
+
+    Without it, a Python-hosted app is grouped under the interpreter and the
+    taskbar shows python.exe's icon instead of the window icon. Must be called
+    before the first window is created. No-op (and never raises) off Windows.
+    """
+    if not _IS_WINDOWS:
+        return
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:  # pragma: no cover - defensive, Windows-only path
+        pass
