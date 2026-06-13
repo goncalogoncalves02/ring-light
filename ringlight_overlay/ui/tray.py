@@ -35,6 +35,7 @@ class TrayIcon(QSystemTrayIcon):
     next_profile_requested = Signal()
     prev_profile_requested = Signal()
     show_settings_requested = Signal()
+    about_requested = Signal()
     quit_requested = Signal()
 
     def __init__(
@@ -67,6 +68,7 @@ class TrayIcon(QSystemTrayIcon):
         menu.addAction("Brightness -").triggered.connect(self.brightness_down_requested)
         menu.addSeparator()
         menu.addAction("Settings...").triggered.connect(self.show_settings_requested)
+        menu.addAction("About...").triggered.connect(self.about_requested)
         menu.addAction("Quit").triggered.connect(self.quit_requested)
         if old := self.contextMenu():
             old.deleteLater()

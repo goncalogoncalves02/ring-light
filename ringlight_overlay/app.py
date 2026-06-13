@@ -14,6 +14,8 @@ from ringlight_overlay.core.monitors import enumerate_monitors
 from ringlight_overlay.core.storage import DebouncedSaver, is_first_run, load_config, save_config
 from ringlight_overlay.hotkeys.manager import HotkeyManager
 from ringlight_overlay.overlay.overlay_manager import OverlayManager
+from ringlight_overlay.ui.dialogs.about import AboutDialog
+from ringlight_overlay.ui.dialogs.first_run import FirstRunWizard
 from ringlight_overlay.ui.main_window import MainWindow
 from ringlight_overlay.ui.tray import TrayIcon
 
@@ -93,6 +95,18 @@ def main() -> int:
         save_config(config)
 
     monitors = enumerate_monitors()
+
+    # First-run wizard: guided setup before the tray appears.
+    # Only run when there is a real display session (first_run=True).
+    # Unit tests never reach main() so no guard needed here.
+    if first_run and monitors:
+        wizard = FirstRunWizard(monitors=monitors)
+        if wizard.exec():
+            config = wizard.result_config(config)
+            save_config(config)
+            _log.info("First-run wizard completed — config saved")
+        else:
+            _log.info("First-run wizard cancelled — keeping seed config")
 
     overlay_mgr = OverlayManager()
     tray = TrayIcon(profiles=config.profiles, active_profile_id=config.active_profile_id)
@@ -177,6 +191,10 @@ def main() -> int:
         win.activateWindow()
         win.raise_()
 
+    def _on_about() -> None:
+        dlg = AboutDialog(parent=win)
+        dlg.exec()
+
     def _shutdown() -> None:
         hotkey_manager.shutdown()
         saver.flush()
@@ -185,8 +203,10 @@ def main() -> int:
     app.aboutToQuit.connect(_shutdown)
 
     win.config_changed.connect(_on_config_changed)
+    win.about_requested.connect(_on_about)
     tray.profile_selected.connect(_on_profile_selected)
     tray.show_settings_requested.connect(_on_show_settings)
+    tray.about_requested.connect(_on_about)
     tray.toggle_all_requested.connect(_on_toggle_all)
     tray.quit_requested.connect(app.quit)
     tray.brightness_up_requested.connect(_on_brightness_up)

@@ -16,10 +16,13 @@ secondary monitors — ideal for streaming, video calls, and photography.
 - Transparent, click-through overlay rings and shapes rendered on any connected monitor
 - Per-profile light configuration: color temperature (Kelvin), size, brightness, feather
 - Multiple profiles with instant switching from the system tray
+- **Hotkey reconfiguration UI** — rebind any of the 6 global hotkeys via key capture with inline conflict detection
+- **Import / export profiles** — share profiles as standalone JSON files; IDs are regenerated on import
+- **First-run wizard** — guided monitor + shape + size setup on first launch
+- **About dialog** — version, description, MIT license, and repository link (tray → About… or Settings → About)
 - Global hotkeys that work while any other app has focus
 - Debounced JSON config auto-save — settings persist across restarts
 - Close-to-tray behavior; graceful shutdown with state flush
-- First-run default "Daylight" profile; tray balloon on first launch
 - Distributable one-folder build — no Python installation required on end-user machines
 
 ## Requirements
@@ -64,6 +67,29 @@ on every `v*` tag push and is downloadable from the GitHub Actions run page.
 | Show settings window | `Ctrl+Alt+S` |
 
 Hotkeys fire globally — they work while any other application has focus.
+
+Open **Settings → Hotkeys** tab to rebind any shortcut via key capture. Conflicts are flagged inline.
+
+## Import / export profiles
+
+Use the **Export Profile…** button in the Settings window to save the active profile as a JSON file.
+Use **Import Profile…** to load a profile from a file — the profile is added with a fresh ID so it never
+collides with existing ones.
+
+## First-run wizard
+
+On first launch a guided wizard appears: pick the target monitor, choose a shape and size, then click
+Finish. The overlay is created in an **enabled** state on the chosen monitor. Cancel the wizard to skip
+and start with the silent default "Daylight" profile instead.
+
+## About
+
+Tray menu → **About…** or Settings → **About** button opens the About dialog showing the app version,
+description, MIT license notice, and a link to the repository.
+
+## License
+
+MIT License — see [LICENSE](LICENSE).
 
 ## Manual smoke checklist (SPEC §10)
 
