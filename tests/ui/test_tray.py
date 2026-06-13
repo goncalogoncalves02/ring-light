@@ -9,7 +9,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QSystemTrayIcon
 
 from ringlight_overlay.core.models import Profile
-from ringlight_overlay.ui.tray import TrayIcon, _app_icon
+from ringlight_overlay.ui.tray import TrayIcon, app_icon
 
 
 def _profiles() -> list[Profile]:
@@ -72,6 +72,6 @@ def test_tray_icon_uses_placeholder_when_file_absent(qapp, tmp_path: Path) -> No
 
 
 def test_app_icon_returns_qicon_instance(qapp) -> None:
-    """_app_icon() returns a QIcon regardless of whether the file is loadable."""
-    result = _app_icon()
+    """app_icon() returns a QIcon regardless of whether the file is loadable."""
+    result = app_icon()
     assert isinstance(result, QIcon)

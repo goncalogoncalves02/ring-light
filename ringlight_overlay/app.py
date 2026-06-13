@@ -14,10 +14,11 @@ from ringlight_overlay.core.monitors import enumerate_monitors
 from ringlight_overlay.core.storage import DebouncedSaver, is_first_run, load_config, save_config
 from ringlight_overlay.hotkeys.manager import HotkeyManager
 from ringlight_overlay.overlay.overlay_manager import OverlayManager
+from ringlight_overlay.overlay.win32_helpers import set_app_user_model_id
 from ringlight_overlay.ui.dialogs.about import AboutDialog
 from ringlight_overlay.ui.dialogs.first_run import FirstRunWizard
 from ringlight_overlay.ui.main_window import MainWindow
-from ringlight_overlay.ui.tray import TrayIcon
+from ringlight_overlay.ui.tray import TrayIcon, app_icon
 
 _log = logging.getLogger(__name__)
 
@@ -78,10 +79,16 @@ def main() -> int:
     _configure_logging()
     _log.info("startup OK")
 
+    # Set the AppUserModelID before any window exists so Windows uses the app
+    # icon in the taskbar instead of the host python.exe icon (no-op off Windows).
+    set_app_user_model_id("RingLightOverlay.App")
+
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
+    # Window/taskbar/title-bar icon — same source as the tray icon.
+    app.setWindowIcon(app_icon())
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         _log.error("No system tray available -- cannot run")
