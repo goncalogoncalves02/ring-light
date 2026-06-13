@@ -23,3 +23,10 @@ def test_migrate_future_version_raises() -> None:
 def test_migrate_unknown_old_version_raises() -> None:
     with pytest.raises(ValueError):
         migrate({"version": 0})
+
+
+def test_migrate_non_int_version_raises_value_error() -> None:
+    # A corrupted/hand-edited file with a string version must raise ValueError,
+    # not a TypeError from comparing str > int.
+    with pytest.raises(ValueError):
+        migrate({"version": "1", "active_profile_id": "p", "profiles": []})

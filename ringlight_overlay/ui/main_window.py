@@ -1,13 +1,28 @@
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import replace
+from pathlib import Path
 
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QFileDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QCheckBox, QSplitter, QVBoxLayout, QWidget
 
 from ringlight_overlay.core.models import ConfigData, Light, Profile
+from ringlight_overlay.core.profile_io import export_profile, import_profile
 from ringlight_overlay.core.storage import DebouncedSaver, save_config
+from ringlight_overlay.ui.widgets.hotkey_editor import HotkeyEditor
 from ringlight_overlay.ui.widgets.light_editor import LightEditor
 from ringlight_overlay.ui.widgets.profile_list import ProfileList
 
@@ -19,6 +34,7 @@ class MainWindow(QWidget):
 
     config_changed = Signal(object)
     quit_requested = Signal()
+    about_requested = Signal()
 
     def __init__(
         self,
@@ -37,8 +53,14 @@ class MainWindow(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 4)
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        tabs = QTabWidget()
 
+        # --- Lights tab ---
+        lights_widget = QWidget()
+        lights_layout = QVBoxLayout(lights_widget)
+        lights_layout.setContentsMargins(0, 0, 0, 0)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         self._profile_list = ProfileList(self._config)
         splitter.addWidget(self._profile_list)
         splitter.setStretchFactor(0, 1)
@@ -46,19 +68,46 @@ class MainWindow(QWidget):
         self._light_editor = LightEditor()
         splitter.addWidget(self._light_editor)
         splitter.setStretchFactor(1, 3)
+        lights_layout.addWidget(splitter)
 
-        root.addWidget(splitter)
+        tabs.addTab(lights_widget, "Lights")
+
+        # --- Hotkeys tab ---
+        self._hotkey_editor = HotkeyEditor(self._config)
+        tabs.addTab(self._hotkey_editor, "Hotkeys")
+
+        root.addWidget(tabs)
+
+        # --- Bottom row ---
+        bottom = QHBoxLayout()
 
         checked = self._config.settings.get("minimize_to_tray_on_close", True)
         self._minimize_checkbox = QCheckBox("Minimize to tray on close")
         self._minimize_checkbox.setChecked(bool(checked))
-        root.addWidget(self._minimize_checkbox)
+        bottom.addWidget(self._minimize_checkbox)
+
+        bottom.addStretch()
+
+        import_btn = QPushButton("Import Profile…")
+        import_btn.clicked.connect(self._on_import_profile)
+        bottom.addWidget(import_btn)
+
+        export_btn = QPushButton("Export Profile…")
+        export_btn.clicked.connect(self._on_export_profile)
+        bottom.addWidget(export_btn)
+
+        about_btn = QPushButton("About")
+        about_btn.clicked.connect(self.about_requested)
+        bottom.addWidget(about_btn)
+
+        root.addLayout(bottom)
 
         self._profile_list.light_selected.connect(self._on_light_selected)
         self._profile_list.profile_selected.connect(self._on_profile_selected)
         self._profile_list.config_changed.connect(self._on_config_changed)
         self._light_editor.light_changed.connect(self._on_light_changed)
         self._minimize_checkbox.toggled.connect(self._on_minimize_toggled)
+        self._hotkey_editor.hotkeys_changed.connect(self._on_hotkeys_changed)
 
     def config(self) -> ConfigData:
         return self._config
@@ -150,6 +199,74 @@ class MainWindow(QWidget):
         self._saver.request_save(self._config)
         self.config_changed.emit(self._config)
         _log.debug("minimize_to_tray_on_close toggled to %s", checked)
+
+    def _on_hotkeys_changed(self, hotkeys: dict) -> None:
+        new_settings = {**self._config.settings, "hotkeys": hotkeys}
+        self._config = ConfigData(
+            version=self._config.version,
+            active_profile_id=self._config.active_profile_id,
+            profiles=self._config.profiles,
+            settings=new_settings,
+        )
+        self._saver.request_save(self._config)
+        self.config_changed.emit(self._config)
+        _log.debug("Hotkeys updated via hotkey editor")
+
+    def _on_export_profile(self) -> None:
+        active = self._find_active_profile()
+        if active is None:
+            QMessageBox.warning(self, "Export Profile", "No active profile to export.")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Profile",
+            f"{active.name}.json",
+            "JSON (*.json)",
+        )
+        if not path:
+            return
+        try:
+            data = export_profile(active)
+            Path(path).write_text(json.dumps(data, indent=2), encoding="utf-8")
+            _log.info("Exported profile %r to %s", active.name, path)
+        except Exception as exc:
+            QMessageBox.critical(self, "Export Failed", f"Could not export profile:\n{exc}")
+            _log.error("Profile export failed: %s", exc)
+
+    def _on_import_profile(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Profile",
+            "",
+            "JSON (*.json)",
+        )
+        if not path:
+            return
+        try:
+            raw = json.loads(Path(path).read_text(encoding="utf-8"))
+            profile = import_profile(raw)
+        except (ValueError, json.JSONDecodeError, OSError) as exc:
+            QMessageBox.critical(self, "Import Failed", f"Could not import profile:\n{exc}")
+            _log.error("Profile import failed: %s", exc)
+            return
+
+        new_profiles = list(self._config.profiles) + [profile]
+        self._config = ConfigData(
+            version=self._config.version,
+            active_profile_id=self._config.active_profile_id,
+            profiles=new_profiles,
+            settings=self._config.settings,
+        )
+        self._profile_list.apply_external_config(self._config)
+        self._saver.request_save(self._config)
+        self.config_changed.emit(self._config)
+        _log.info("Imported profile %r (id=%s)", profile.name, profile.id)
+
+    def _find_active_profile(self) -> Profile | None:
+        for profile in self._config.profiles:
+            if profile.id == self._config.active_profile_id:
+                return profile
+        return self._config.profiles[0] if self._config.profiles else None
 
     def _find_light(self, light_id: str) -> Light | None:
         for profile in self._config.profiles:

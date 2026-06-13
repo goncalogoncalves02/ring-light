@@ -19,6 +19,8 @@ def migrate(raw: dict) -> dict:
     version = raw.get("version")
     if version is None:
         raise ValueError("Config payload is missing required 'version' field.")
+    if not isinstance(version, int) or isinstance(version, bool):
+        raise ValueError(f"Config 'version' must be an integer, got {type(version).__name__}.")
     if version > CURRENT_VERSION:
         raise ValueError(
             f"Config version {version} is newer than current "
