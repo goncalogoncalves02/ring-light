@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 
 from ringlight_overlay.core.models import ConfigData, Light, Profile
+from ringlight_overlay.core.monitors import enumerate_monitors
 from ringlight_overlay.core.profile_io import export_profile, import_profile
 from ringlight_overlay.core.storage import DebouncedSaver, save_config
 from ringlight_overlay.ui.widgets.hotkey_editor import HotkeyEditor
@@ -108,6 +109,27 @@ class MainWindow(QWidget):
         self._light_editor.light_changed.connect(self._on_light_changed)
         self._minimize_checkbox.toggled.connect(self._on_minimize_toggled)
         self._hotkey_editor.hotkeys_changed.connect(self._on_hotkeys_changed)
+
+        self._refresh_monitors()
+
+    def _refresh_monitors(self) -> None:
+        """Populate the light editor's monitor dropdown from the live screens.
+
+        Called at build time and on every show so a monitor connected or
+        disconnected while the window was hidden is reflected. Re-loads the
+        current light afterwards so its monitor stays selected (``load_light``
+        suppresses signals, so this never triggers a spurious save).
+        """
+        self._light_editor.load_monitors(enumerate_monitors())
+        light_id = self._light_editor.current_light_id()
+        if light_id is not None:
+            light = self._find_light(light_id)
+            if light is not None:
+                self._light_editor.load_light(light)
+
+    def showEvent(self, event) -> None:  # type: ignore[override]
+        self._refresh_monitors()
+        super().showEvent(event)
 
     def config(self) -> ConfigData:
         return self._config
