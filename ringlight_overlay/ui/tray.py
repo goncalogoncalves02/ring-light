@@ -79,7 +79,10 @@ class TrayIcon(QSystemTrayIcon):
         self.setContextMenu(menu)
 
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+        # Double-click opens Settings (Windows convention). A single Trigger is
+        # intentionally inert: Windows fires Trigger before DoubleClick, so any
+        # mutating action on the single click would also run on every
+        # double-click. Toggling lives in the context menu and the Ctrl+Alt+L
+        # hotkey instead.
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             self.show_settings_requested.emit()
-        elif reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            self.toggle_all_requested.emit()

@@ -173,6 +173,11 @@ class FirstRunWizard(QWizard):
         super().__init__(parent)
         self.setWindowTitle("RingLight Overlay — Setup")
         self.setMinimumSize(500, 300)
+        # The Windows default (AeroStyle) paints a fixed light header/background
+        # that ignores the system dark-mode palette, leaving the wizard rendered
+        # white-on-white. ClassicStyle follows the standard widget palette, so it
+        # stays readable in both light and dark mode.
+        self.setWizardStyle(QWizard.WizardStyle.ClassicStyle)
 
         self._monitor_page = _MonitorPage(monitors)
         self._shape_page = _ShapePage()

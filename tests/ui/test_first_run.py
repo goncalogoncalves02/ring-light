@@ -131,3 +131,21 @@ class TestFirstRunWizard:
         monitors = [_monitor()]
         wizard = FirstRunWizard(monitors=monitors)
         assert wizard is not None
+
+    def test_explicitly_sets_palette_faithful_style(self, qapp):
+        # The Windows default is AeroStyle, which paints a fixed light
+        # header/background that ignores the system dark-mode palette, rendering
+        # the wizard text white-on-white. The wizard must *explicitly* select a
+        # palette-faithful style (ClassicStyle) so it is never left on the
+        # platform default. Asserting the final style is not enough — on Linux
+        # the default is already ClassicStyle — so we verify the explicit call.
+        from unittest.mock import patch
+
+        from PySide6.QtWidgets import QWizard
+
+        monitors = [_monitor()]
+        with patch.object(QWizard, "setWizardStyle") as mock_set_style:
+            FirstRunWizard(monitors=monitors)
+
+        passed_styles = [arg for call in mock_set_style.call_args_list for arg in call.args]
+        assert QWizard.WizardStyle.ClassicStyle in passed_styles
