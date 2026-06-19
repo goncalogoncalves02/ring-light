@@ -75,3 +75,37 @@ def test_app_icon_returns_qicon_instance(qapp) -> None:
     """app_icon() returns a QIcon regardless of whether the file is loadable."""
     result = app_icon()
     assert isinstance(result, QIcon)
+
+
+def _make_tray(qapp) -> TrayIcon:
+    profiles = _profiles()
+    return TrayIcon(profiles=profiles, active_profile_id=profiles[0].id)
+
+
+def test_double_click_opens_settings(qapp) -> None:
+    tray = _make_tray(qapp)
+    fired: list[str] = []
+    tray.show_settings_requested.connect(lambda: fired.append("settings"))
+    tray._on_activated(QSystemTrayIcon.ActivationReason.DoubleClick)
+    assert fired == ["settings"]
+
+
+def test_double_click_does_not_toggle_lights(qapp) -> None:
+    # Opening the app via the tray must never turn the overlay off. Toggling
+    # stays available through the context menu and the Ctrl+Alt+L hotkey.
+    tray = _make_tray(qapp)
+    toggled: list[str] = []
+    tray.toggle_all_requested.connect(lambda: toggled.append("toggle"))
+    tray._on_activated(QSystemTrayIcon.ActivationReason.DoubleClick)
+    assert toggled == []
+
+
+def test_single_click_does_nothing(qapp) -> None:
+    # On Windows a double-click fires Trigger before DoubleClick, so a single
+    # Trigger must be inert — otherwise it competes with the double-click action.
+    tray = _make_tray(qapp)
+    fired: list[str] = []
+    tray.show_settings_requested.connect(lambda: fired.append("settings"))
+    tray.toggle_all_requested.connect(lambda: fired.append("toggle"))
+    tray._on_activated(QSystemTrayIcon.ActivationReason.Trigger)
+    assert fired == []
