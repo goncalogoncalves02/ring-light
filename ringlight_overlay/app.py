@@ -18,6 +18,7 @@ from ringlight_overlay.overlay.win32_helpers import set_app_user_model_id
 from ringlight_overlay.ui.dialogs.about import AboutDialog
 from ringlight_overlay.ui.dialogs.first_run import FirstRunWizard
 from ringlight_overlay.ui.main_window import MainWindow
+from ringlight_overlay.ui.theme import apply_theme
 from ringlight_overlay.ui.tray import TrayIcon, app_icon
 
 _log = logging.getLogger(__name__)
@@ -86,6 +87,7 @@ def main() -> int:
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
+    apply_theme(app)
     app.setQuitOnLastWindowClosed(False)
     # Window/taskbar/title-bar icon — same source as the tray icon.
     app.setWindowIcon(app_icon())
