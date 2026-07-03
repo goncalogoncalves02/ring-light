@@ -10,7 +10,7 @@ from ringlight_overlay.app import _configure_logging
 
 
 def test_version_is_set() -> None:
-    assert ringlight_overlay.__version__ == "0.2.0"
+    assert ringlight_overlay.__version__ == "0.2.1"
 
 
 def test_configure_logging_writes_startup_log(
