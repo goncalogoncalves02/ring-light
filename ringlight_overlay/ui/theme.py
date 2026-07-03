@@ -26,7 +26,7 @@ def build_dark_palette() -> QPalette:
     palette.setColor(QPalette.ColorRole.WindowText, text)
     palette.setColor(QPalette.ColorRole.Base, base)
     palette.setColor(QPalette.ColorRole.AlternateBase, window)
-    palette.setColor(QPalette.ColorRole.ToolTipBase, text)
+    palette.setColor(QPalette.ColorRole.ToolTipBase, base)
     palette.setColor(QPalette.ColorRole.ToolTipText, text)
     palette.setColor(QPalette.ColorRole.Text, text)
     palette.setColor(QPalette.ColorRole.Button, window)

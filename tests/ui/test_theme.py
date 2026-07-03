@@ -34,6 +34,16 @@ def test_light_palette_window_is_light():
     assert window.lightness() > 200
 
 
+def test_dark_palette_tooltip_text_is_readable_against_tooltip_base():
+    # Regression: ToolTipBase and ToolTipText were both set to the same
+    # white color, making every tooltip render white-on-white under dark
+    # mode — the exact class of bug this module exists to prevent.
+    palette = build_dark_palette()
+    tooltip_base = palette.color(QPalette.ColorRole.ToolTipBase)
+    tooltip_text = palette.color(QPalette.ColorRole.ToolTipText)
+    assert abs(tooltip_base.lightness() - tooltip_text.lightness()) > 100
+
+
 def test_disabled_text_is_visible_but_dimmer_than_active_text_dark():
     palette = build_dark_palette()
     active = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText)
