@@ -90,18 +90,3 @@ description, MIT license notice, and a link to the repository.
 ## License
 
 MIT License — see [LICENSE](LICENSE).
-
-## Manual smoke checklist (SPEC §10)
-
-Run these steps on a clean Windows 11 machine using the packaged build before shipping:
-
-- [ ] Light renders correctly on each connected monitor
-- [ ] Click-through: clicking the overlay passes focus to the app underneath
-- [ ] Overlay stays topmost over Chrome borderless-fullscreen and OBS
-- [ ] Profile switch updates lights without flicker
-- [ ] Hotkeys fire while focus is on another app
-- [ ] App restart restores the last active profile and window position
-- [ ] Connect and disconnect a monitor while running — no crash; overlay re-snaps
-- [ ] Tray shows the `favicon.ico` icon (not the orange placeholder)
-- [ ] `dist/RingLightOverlay` total size is under 130 MB
-- [ ] Screenshots captured and saved to `docs/screenshots/`
