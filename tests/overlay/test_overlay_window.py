@@ -167,3 +167,100 @@ def test_apply_placement_reapplies_click_through_when_visible(qapp, monkeypatch)
 
     assert len(hwnds) == 1
     win.close()
+
+
+def test_screen_changed_to_wrong_screen_reasserts_placement(qapp, monkeypatch) -> None:
+    from unittest.mock import Mock
+
+    from PySide6.QtCore import QRect
+
+    import ringlight_overlay.overlay.overlay_window as ow_module
+
+    win = OverlayWindow(_light())
+    win._target_screen_name = "\\\\.\\DISPLAY2"
+    win._target_rect = QRect(1920, 0, 400, 400)
+
+    restored_screen = Mock()
+    restored_screen.name.return_value = "\\\\.\\DISPLAY2"
+    monkeypatch.setattr(ow_module, "qscreen_by_name", lambda name: restored_screen)
+
+    reasserted: list[tuple] = []
+    monkeypatch.setattr(
+        OverlayWindow, "apply_placement", lambda self, s, r: reasserted.append((s, r))
+    )
+
+    wrong_screen = Mock()
+    wrong_screen.name.return_value = "\\\\.\\DISPLAY1"
+    win._on_screen_changed(wrong_screen)
+
+    assert reasserted == [(restored_screen, QRect(1920, 0, 400, 400))]
+    win.close()
+
+
+def test_screen_changed_to_target_screen_is_noop(qapp, monkeypatch) -> None:
+    from unittest.mock import Mock
+
+    from PySide6.QtCore import QRect
+
+    win = OverlayWindow(_light())
+    win._target_screen_name = "\\\\.\\DISPLAY2"
+    win._target_rect = QRect(1920, 0, 400, 400)
+
+    reasserted: list[tuple] = []
+    monkeypatch.setattr(
+        OverlayWindow, "apply_placement", lambda self, s, r: reasserted.append((s, r))
+    )
+
+    same_screen = Mock()
+    same_screen.name.return_value = "\\\\.\\DISPLAY2"
+    win._on_screen_changed(same_screen)
+
+    assert reasserted == []
+    win.close()
+
+
+def test_screen_changed_with_no_target_is_noop(qapp, monkeypatch) -> None:
+    from unittest.mock import Mock
+
+    win = OverlayWindow(_light())
+    reasserted: list[tuple] = []
+    monkeypatch.setattr(
+        OverlayWindow, "apply_placement", lambda self, s, r: reasserted.append((s, r))
+    )
+    win._on_screen_changed(Mock())
+    assert reasserted == []
+    win.close()
+
+
+def test_screen_changed_when_target_screen_missing_is_noop(qapp, monkeypatch) -> None:
+    from unittest.mock import Mock
+
+    from PySide6.QtCore import QRect
+
+    import ringlight_overlay.overlay.overlay_window as ow_module
+
+    win = OverlayWindow(_light())
+    win._target_screen_name = "\\\\.\\GONE"
+    win._target_rect = QRect(0, 0, 400, 400)
+    monkeypatch.setattr(ow_module, "qscreen_by_name", lambda name: None)
+
+    reasserted: list[tuple] = []
+    monkeypatch.setattr(
+        OverlayWindow, "apply_placement", lambda self, s, r: reasserted.append((s, r))
+    )
+
+    other = Mock()
+    other.name.return_value = "\\\\.\\DISPLAY1"
+    win._on_screen_changed(other)
+    assert reasserted == []
+    win.close()
+
+
+def test_show_connects_screen_watch_once(qapp) -> None:
+    win = OverlayWindow(_light())
+    win.show()
+    assert win._screen_watch_connected is True
+    win.hide()
+    win.show()  # second show must not double-connect (flag stays True, no error)
+    assert win._screen_watch_connected is True
+    win.close()

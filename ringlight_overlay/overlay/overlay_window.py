@@ -5,6 +5,7 @@ from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QWidget
 
 from ringlight_overlay.core.models import Light
+from ringlight_overlay.core.monitors import qscreen_by_name
 from ringlight_overlay.overlay import shapes
 from ringlight_overlay.overlay.win32_helpers import apply_click_through
 
@@ -17,6 +18,7 @@ class OverlayWindow(QWidget):
         self._light = light
         self._target_screen_name: str | None = None
         self._target_rect: QRect | None = None
+        self._screen_watch_connected = False
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -34,6 +36,10 @@ class OverlayWindow(QWidget):
     def showEvent(self, event) -> None:  # type: ignore[override]
         super().showEvent(event)
         apply_click_through(int(self.winId()))
+        handle = self.windowHandle()
+        if handle is not None and not self._screen_watch_connected:
+            handle.screenChanged.connect(self._on_screen_changed)
+            self._screen_watch_connected = True
 
     def paintEvent(self, event) -> None:  # type: ignore[override]
         painter = QPainter(self)
@@ -65,3 +71,21 @@ class OverlayWindow(QWidget):
         self.setGeometry(rect)
         if self.isVisible():
             apply_click_through(int(self.winId()))
+
+    def _on_screen_changed(self, screen) -> None:
+        """Undo unsolicited screen moves (e.g. DPI-change fallout on Windows).
+
+        Loop-safe without a re-entrancy guard: re-asserting moves us back to
+        the target, so the follow-up screenChanged(target) matches the name
+        and no-ops. If the target screen vanished (monitor unplugged), do
+        nothing — the next apply_profile() will re-home the light.
+        """
+        target = self._target_screen_name
+        if not target or self._target_rect is None:
+            return
+        if screen is not None and screen.name() == target:
+            return
+        restored = qscreen_by_name(target)
+        if restored is None:
+            return
+        self.apply_placement(restored, self._target_rect)
