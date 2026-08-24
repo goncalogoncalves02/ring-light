@@ -77,3 +77,51 @@ def test_close_all_removes_all_windows(qapp) -> None:
     assert manager.window_count == 3
     manager.close_all()
     assert manager.window_count == 0
+
+
+def test_position_window_uses_screen_anchored_placement(qapp, monkeypatch) -> None:
+    from unittest.mock import Mock
+
+    from PySide6.QtCore import QRect
+
+    import ringlight_overlay.overlay.overlay_manager as om_module
+    from ringlight_overlay.overlay.overlay_window import OverlayWindow
+
+    sentinel_screen = Mock()
+    sentinel_screen.name.return_value = "\\\\.\\DISPLAY1"
+    monkeypatch.setattr(om_module, "qscreen_for", lambda monitor: sentinel_screen)
+
+    placements: list[tuple] = []
+    monkeypatch.setattr(
+        OverlayWindow, "apply_placement", lambda self, s, r: placements.append((s, r))
+    )
+
+    manager = OverlayManager()
+    light = _light()  # position (0.5, 0.5), size 400x400, monitor \\.\DISPLAY1 @ (0,0,1920,1080)
+    profile = Profile(id="p-1", name="T", lights=[light])
+    manager.apply_profile(profile, [_monitor()])
+
+    assert placements == [(sentinel_screen, QRect(760, 340, 400, 400))]
+    manager.close_all()
+
+
+def test_position_window_with_unresolvable_screen_still_places(qapp, monkeypatch) -> None:
+    from PySide6.QtCore import QRect
+
+    import ringlight_overlay.overlay.overlay_manager as om_module
+    from ringlight_overlay.overlay.overlay_window import OverlayWindow
+
+    monkeypatch.setattr(om_module, "qscreen_for", lambda monitor: None)
+
+    placements: list[tuple] = []
+    monkeypatch.setattr(
+        OverlayWindow, "apply_placement", lambda self, s, r: placements.append((s, r))
+    )
+
+    manager = OverlayManager()
+    light = _light()
+    profile = Profile(id="p-1", name="T", lights=[light])
+    manager.apply_profile(profile, [_monitor()])
+
+    assert placements == [(None, QRect(760, 340, 400, 400))]
+    manager.close_all()
