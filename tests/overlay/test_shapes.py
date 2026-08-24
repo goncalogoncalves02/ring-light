@@ -9,28 +9,7 @@ from ringlight_overlay.overlay.shapes.base import Shape
 from ringlight_overlay.overlay.shapes.circle import CircleShape
 from ringlight_overlay.overlay.shapes.rectangle import RectangleShape
 from ringlight_overlay.overlay.shapes.ring import RingShape
-
-
-def _valid_light(shape: str = "ring") -> Light:
-    params: dict = {}
-    if shape == "ring":
-        params = {"thickness": 80}
-    return Light(
-        id="light-1",
-        enabled=True,
-        monitor_name="\\\\.\\DISPLAY1",
-        monitor_index=0,
-        shape=shape,
-        position=(0.5, 0.5),
-        size=(400, 400),
-        color_mode="kelvin",
-        color_rgb=(255, 240, 220),
-        color_kelvin=5600,
-        brightness=0.85,
-        opacity=0.95,
-        feather=12,
-        shape_params=params,
-    )
+from tests.factories import make_light
 
 
 def _paint_on_pixmap(shape: Shape, light: Light) -> None:
@@ -55,7 +34,7 @@ def test_ring_default_params_has_thickness() -> None:
 
 
 def test_ring_paint_smoke(qapp) -> None:
-    _paint_on_pixmap(RingShape(), _valid_light("ring"))
+    _paint_on_pixmap(RingShape(), make_light(shape="ring"))
 
 
 def test_circle_default_params_returns_dict(qapp) -> None:
@@ -63,7 +42,7 @@ def test_circle_default_params_returns_dict(qapp) -> None:
 
 
 def test_circle_paint_smoke(qapp) -> None:
-    _paint_on_pixmap(CircleShape(), _valid_light("circle"))
+    _paint_on_pixmap(CircleShape(), make_light(shape="circle"))
 
 
 def test_rectangle_default_params_returns_dict(qapp) -> None:
@@ -71,4 +50,4 @@ def test_rectangle_default_params_returns_dict(qapp) -> None:
 
 
 def test_rectangle_paint_smoke(qapp) -> None:
-    _paint_on_pixmap(RectangleShape(), _valid_light("rectangle"))
+    _paint_on_pixmap(RectangleShape(), make_light(shape="rectangle"))

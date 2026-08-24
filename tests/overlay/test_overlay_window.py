@@ -1,70 +1,31 @@
 from __future__ import annotations
 
-import uuid
-
 import pytest
 from PySide6.QtCore import Qt
 
 from ringlight_overlay.core.models import Light
 from ringlight_overlay.overlay.overlay_window import OverlayWindow
-
-
-def _valid_light() -> Light:
-    return Light(
-        id="light-1",
-        enabled=True,
-        monitor_name="\\\\.\\DISPLAY1",
-        monitor_index=0,
-        shape="ring",
-        position=(0.5, 0.5),
-        size=(400, 400),
-        color_mode="kelvin",
-        color_rgb=(255, 240, 220),
-        color_kelvin=5600,
-        brightness=0.85,
-        opacity=0.95,
-        feather=12,
-        shape_params={"thickness": 80},
-    )
-
-
-def _light(enabled: bool = True, shape: str = "ring") -> Light:
-    return Light(
-        id=str(uuid.uuid4()),
-        enabled=enabled,
-        monitor_name="\\\\.\\DISPLAY1",
-        monitor_index=0,
-        shape=shape,
-        position=(0.5, 0.5),
-        size=(400, 400),
-        color_mode="kelvin",
-        color_rgb=(255, 240, 220),
-        color_kelvin=5600,
-        brightness=0.85,
-        opacity=0.95,
-        feather=12,
-        shape_params={"thickness": 80} if shape == "ring" else {},
-    )
+from tests.factories import make_light
 
 
 def test_overlay_window_has_frameless_hint(qapp) -> None:
-    win = OverlayWindow(_valid_light())
+    win = OverlayWindow(make_light())
     flags = win.windowFlags()
     assert flags & Qt.WindowType.FramelessWindowHint
 
 
 def test_overlay_window_has_stays_on_top_hint(qapp) -> None:
-    win = OverlayWindow(_valid_light())
+    win = OverlayWindow(make_light())
     assert win.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
 
 
 def test_overlay_window_has_translucent_background(qapp) -> None:
-    win = OverlayWindow(_valid_light())
+    win = OverlayWindow(make_light())
     assert win.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
 
 def test_update_light_changes_opacity(qapp) -> None:
-    light = _valid_light()
+    light = make_light()
     win = OverlayWindow(light)
     new_light = Light(
         id=light.id,
@@ -87,7 +48,7 @@ def test_update_light_changes_opacity(qapp) -> None:
 
 
 def test_update_light_stores_new_light(qapp) -> None:
-    light = _valid_light()
+    light = make_light()
     win = OverlayWindow(light)
     new_light = Light(
         id=light.id,
@@ -112,7 +73,7 @@ def test_update_light_stores_new_light(qapp) -> None:
 def test_apply_placement_sets_geometry(qapp) -> None:
     from PySide6.QtCore import QRect
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     win.apply_placement(None, QRect(100, 200, 400, 400))
     assert win.geometry() == QRect(100, 200, 400, 400)
     win.close()
@@ -123,7 +84,7 @@ def test_apply_placement_anchors_to_screen_when_different(qapp, monkeypatch) -> 
 
     from PySide6.QtCore import QRect
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     calls: list[object] = []
     monkeypatch.setattr(OverlayWindow, "setScreen", lambda self, s: calls.append(s))
 
@@ -139,7 +100,7 @@ def test_apply_placement_anchors_to_screen_when_different(qapp, monkeypatch) -> 
 def test_apply_placement_skips_setscreen_when_already_on_target(qapp, monkeypatch) -> None:
     from PySide6.QtCore import QRect
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     calls: list[object] = []
     monkeypatch.setattr(OverlayWindow, "setScreen", lambda self, s: calls.append(s))
 
@@ -155,7 +116,7 @@ def test_apply_placement_reapplies_click_through_when_visible(qapp, monkeypatch)
 
     import ringlight_overlay.overlay.overlay_window as ow_module
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     win.show()
     hwnds: list[int] = []
     monkeypatch.setattr(ow_module, "apply_click_through", lambda hwnd: hwnds.append(hwnd))
@@ -176,7 +137,7 @@ def test_screen_changed_to_wrong_screen_reasserts_placement(qapp, monkeypatch) -
 
     import ringlight_overlay.overlay.overlay_window as ow_module
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     win._target_screen_name = "\\\\.\\DISPLAY2"
     win._target_rect = QRect(1920, 0, 400, 400)
 
@@ -202,7 +163,7 @@ def test_screen_changed_to_target_screen_is_noop(qapp, monkeypatch) -> None:
 
     from PySide6.QtCore import QRect
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     win._target_screen_name = "\\\\.\\DISPLAY2"
     win._target_rect = QRect(1920, 0, 400, 400)
 
@@ -222,7 +183,7 @@ def test_screen_changed_to_target_screen_is_noop(qapp, monkeypatch) -> None:
 def test_screen_changed_with_no_target_is_noop(qapp, monkeypatch) -> None:
     from unittest.mock import Mock
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     reasserted: list[tuple] = []
     monkeypatch.setattr(
         OverlayWindow, "apply_placement", lambda self, s, r: reasserted.append((s, r))
@@ -239,7 +200,7 @@ def test_screen_changed_when_target_screen_missing_is_noop(qapp, monkeypatch) ->
 
     import ringlight_overlay.overlay.overlay_window as ow_module
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     win._target_screen_name = "\\\\.\\GONE"
     win._target_rect = QRect(0, 0, 400, 400)
     monkeypatch.setattr(ow_module, "qscreen_by_name", lambda name: None)
@@ -263,7 +224,7 @@ def test_on_screen_changed_reentrancy_guard_blocks_call(qapp, monkeypatch) -> No
 
     import ringlight_overlay.overlay.overlay_window as ow_module
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     win._target_screen_name = "\\\\.\\DISPLAY2"
     win._target_rect = QRect(1920, 0, 400, 400)
     win._reasserting = True
@@ -294,7 +255,7 @@ def test_on_screen_changed_does_not_recurse_when_reassert_reenters(qapp, monkeyp
 
     import ringlight_overlay.overlay.overlay_window as ow_module
 
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
     win._target_screen_name = "\\\\.\\DISPLAY2"
     win._target_rect = QRect(1920, 0, 400, 400)
 
@@ -323,7 +284,7 @@ def test_on_screen_changed_does_not_recurse_when_reassert_reenters(qapp, monkeyp
 
 
 def test_show_connects_screen_watch_once(qapp, monkeypatch) -> None:
-    win = OverlayWindow(_light())
+    win = OverlayWindow(make_light())
 
     observed: list[object] = []
     monkeypatch.setattr(OverlayWindow, "_on_screen_changed", lambda self, s: observed.append(s))
