@@ -24,5 +24,5 @@ class TestAboutDialog:
         version = ringlight_overlay.__version__
         assert any(version in t for t in texts), f"Version {version!r} not found in labels: {texts}"
 
-    def test_version_is_0_2_1(self, qapp):
-        assert ringlight_overlay.__version__ == "0.2.1"
+    def test_version_is_0_2_2(self, qapp):
+        assert ringlight_overlay.__version__ == "0.2.2"

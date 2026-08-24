@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import logging
 
+from PySide6.QtCore import QRect
+
 from ringlight_overlay.core.models import Light, Profile
-from ringlight_overlay.core.monitors import MonitorInfo, match_monitor
+from ringlight_overlay.core.monitors import MonitorInfo, match_monitor, qscreen_for
 from ringlight_overlay.overlay.overlay_window import OverlayWindow
 
 _log = logging.getLogger(__name__)
@@ -69,7 +71,7 @@ class OverlayManager:
         geo = monitor.geometry
         x = geo[0] + int(light.position[0] * geo[2]) - light.size[0] // 2
         y = geo[1] + int(light.position[1] * geo[3]) - light.size[1] // 2
-        win.setGeometry(x, y, light.size[0], light.size[1])
+        win.apply_placement(qscreen_for(monitor), QRect(x, y, light.size[0], light.size[1]))
 
     def close_all(self) -> None:
         for win in self._windows.values():
