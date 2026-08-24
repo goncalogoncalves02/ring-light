@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QRect, QRectF, Qt
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPainter, QScreen
 from PySide6.QtWidgets import QWidget
 
 from ringlight_overlay.core.models import Light
@@ -19,6 +19,7 @@ class OverlayWindow(QWidget):
         self._target_screen_name: str | None = None
         self._target_rect: QRect | None = None
         self._screen_watch_connected = False
+        self._reasserting = False
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -54,7 +55,7 @@ class OverlayWindow(QWidget):
         self.setWindowOpacity(light.opacity)
         self.update()
 
-    def apply_placement(self, screen, rect: QRect) -> None:
+    def apply_placement(self, screen: QScreen | None, rect: QRect) -> None:
         """Anchor this window to *screen* and apply *rect* (global coords).
 
         Anchoring matters: with per-monitor DPI, global logical coordinates
@@ -72,14 +73,24 @@ class OverlayWindow(QWidget):
         if self.isVisible():
             apply_click_through(int(self.winId()))
 
-    def _on_screen_changed(self, screen) -> None:
+    def _on_screen_changed(self, screen: QScreen | None) -> None:
         """Undo unsolicited screen moves (e.g. DPI-change fallout on Windows).
 
-        Loop-safe without a re-entrancy guard: re-asserting moves us back to
-        the target, so the follow-up screenChanged(target) matches the name
-        and no-ops. If the target screen vanished (monitor unplugged), do
-        nothing — the next apply_profile() will re-home the light.
+        Re-asserting placement normally settles: apply_placement's setScreen
+        moves us back to the target, so the follow-up screenChanged(target)
+        matches the name and no-ops. But apply_placement also calls
+        setGeometry(), and under per-monitor DPI *that* call can itself land
+        the window on the wrong screen (a stale/rounded rect, a rect
+        straddling a monitor boundary, a window wider than the target
+        screen) — which would re-enter this handler synchronously and loop.
+        The `_reasserting` guard bounds that: a re-entrant call while already
+        reasserting is dropped, turning a pathological loop into a single
+        failed re-assert instead of unbounded recursion. If the target
+        screen vanished (monitor unplugged), do nothing — the next
+        apply_profile() will re-home the light.
         """
+        if self._reasserting:
+            return
         target = self._target_screen_name
         if not target or self._target_rect is None:
             return
@@ -88,4 +99,8 @@ class OverlayWindow(QWidget):
         restored = qscreen_by_name(target)
         if restored is None:
             return
-        self.apply_placement(restored, self._target_rect)
+        self._reasserting = True
+        try:
+            self.apply_placement(restored, self._target_rect)
+        finally:
+            self._reasserting = False

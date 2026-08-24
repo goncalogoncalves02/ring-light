@@ -165,7 +165,7 @@ def test_apply_placement_reapplies_click_through_when_visible(qapp, monkeypatch)
     monkeypatch.setattr(OverlayWindow, "setScreen", lambda self, s: None)
     win.apply_placement(fake_screen, QRect(0, 0, 400, 400))
 
-    assert len(hwnds) == 1
+    assert hwnds == [int(win.winId())]
     win.close()
 
 
@@ -256,11 +256,85 @@ def test_screen_changed_when_target_screen_missing_is_noop(qapp, monkeypatch) ->
     win.close()
 
 
-def test_show_connects_screen_watch_once(qapp) -> None:
+def test_on_screen_changed_reentrancy_guard_blocks_call(qapp, monkeypatch) -> None:
+    from unittest.mock import Mock
+
+    from PySide6.QtCore import QRect
+
+    import ringlight_overlay.overlay.overlay_window as ow_module
+
     win = OverlayWindow(_light())
+    win._target_screen_name = "\\\\.\\DISPLAY2"
+    win._target_rect = QRect(1920, 0, 400, 400)
+    win._reasserting = True
+
+    # qscreen_by_name resolves fine here — without the guard this would go
+    # on to call apply_placement, proving the early return is what stops it.
+    restored_screen = Mock()
+    restored_screen.name.return_value = "\\\\.\\DISPLAY2"
+    monkeypatch.setattr(ow_module, "qscreen_by_name", lambda name: restored_screen)
+
+    reasserted: list[tuple] = []
+    monkeypatch.setattr(
+        OverlayWindow, "apply_placement", lambda self, s, r: reasserted.append((s, r))
+    )
+
+    wrong_screen = Mock()
+    wrong_screen.name.return_value = "\\\\.\\DISPLAY1"
+    win._on_screen_changed(wrong_screen)
+
+    assert reasserted == []
+    win.close()
+
+
+def test_on_screen_changed_does_not_recurse_when_reassert_reenters(qapp, monkeypatch) -> None:
+    from unittest.mock import Mock
+
+    from PySide6.QtCore import QRect
+
+    import ringlight_overlay.overlay.overlay_window as ow_module
+
+    win = OverlayWindow(_light())
+    win._target_screen_name = "\\\\.\\DISPLAY2"
+    win._target_rect = QRect(1920, 0, 400, 400)
+
+    restored_screen = Mock()
+    restored_screen.name.return_value = "\\\\.\\DISPLAY2"
+    monkeypatch.setattr(ow_module, "qscreen_by_name", lambda name: restored_screen)
+
+    wrong_screen = Mock()
+    wrong_screen.name.return_value = "\\\\.\\DISPLAY1"
+
+    calls: list[object] = []
+
+    def fake_apply_placement(self, screen, rect):
+        calls.append(screen)
+        # Simulate setGeometry() inside the real apply_placement landing the
+        # window back on the wrong screen mid-reassert — this must not
+        # recurse into another apply_placement call.
+        self._on_screen_changed(wrong_screen)
+
+    monkeypatch.setattr(OverlayWindow, "apply_placement", fake_apply_placement)
+
+    win._on_screen_changed(wrong_screen)  # must not raise RecursionError
+
+    assert calls == [restored_screen]  # the re-entrant call was dropped by the guard
+    win.close()
+
+
+def test_show_connects_screen_watch_once(qapp, monkeypatch) -> None:
+    win = OverlayWindow(_light())
+
+    observed: list[object] = []
+    monkeypatch.setattr(OverlayWindow, "_on_screen_changed", lambda self, s: observed.append(s))
+
     win.show()
     assert win._screen_watch_connected is True
     win.hide()
     win.show()  # second show must not double-connect (flag stays True, no error)
     assert win._screen_watch_connected is True
+
+    sentinel = win.screen()
+    win.windowHandle().screenChanged.emit(sentinel)
+    assert observed == [sentinel]  # exactly one call — proves single connection, not zero or two
     win.close()
