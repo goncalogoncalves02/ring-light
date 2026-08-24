@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QRect, QRectF, Qt
-from PySide6.QtGui import QPainter, QScreen
+from PySide6.QtGui import QPainter, QScreen, QWindow
 from PySide6.QtWidgets import QWidget
 
 from ringlight_overlay.core.models import Light
@@ -18,7 +18,7 @@ class OverlayWindow(QWidget):
         self._light = light
         self._target_screen_name: str | None = None
         self._target_rect: QRect | None = None
-        self._screen_watch_connected = False
+        self._watched_handle: QWindow | None = None
         self._reasserting = False
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
@@ -37,10 +37,14 @@ class OverlayWindow(QWidget):
     def showEvent(self, event) -> None:  # type: ignore[override]
         super().showEvent(event)
         apply_click_through(int(self.winId()))
+        # Track the connected QWindow by identity, not a bool: if anything
+        # ever recreates the native window (setWindowFlags, reparenting),
+        # the old connection dies with the old handle and the watch must be
+        # re-attached to the new one.
         handle = self.windowHandle()
-        if handle is not None and not self._screen_watch_connected:
+        if handle is not None and self._watched_handle is not handle:
             handle.screenChanged.connect(self._on_screen_changed)
-            self._screen_watch_connected = True
+            self._watched_handle = handle
 
     def paintEvent(self, event) -> None:  # type: ignore[override]
         painter = QPainter(self)

@@ -329,10 +329,10 @@ def test_show_connects_screen_watch_once(qapp, monkeypatch) -> None:
     monkeypatch.setattr(OverlayWindow, "_on_screen_changed", lambda self, s: observed.append(s))
 
     win.show()
-    assert win._screen_watch_connected is True
+    assert win._watched_handle is win.windowHandle()
     win.hide()
-    win.show()  # second show must not double-connect (flag stays True, no error)
-    assert win._screen_watch_connected is True
+    win.show()  # second show with the same handle must not double-connect
+    assert win._watched_handle is win.windowHandle()
 
     sentinel = win.screen()
     win.windowHandle().screenChanged.emit(sentinel)
