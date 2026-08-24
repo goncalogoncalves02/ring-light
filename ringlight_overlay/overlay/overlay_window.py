@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QRect, QRectF, Qt
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QWidget
 
@@ -15,6 +15,8 @@ class OverlayWindow(QWidget):
     def __init__(self, light: Light, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._light = light
+        self._target_screen_name: str | None = None
+        self._target_rect: QRect | None = None
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -45,3 +47,21 @@ class OverlayWindow(QWidget):
         self._light = light
         self.setWindowOpacity(light.opacity)
         self.update()
+
+    def apply_placement(self, screen, rect: QRect) -> None:
+        """Anchor this window to *screen* and apply *rect* (global coords).
+
+        Anchoring matters: with per-monitor DPI, global logical coordinates
+        are ambiguous across screens — Qt disambiguates via the window's
+        screen association and may silently re-assign an unanchored window.
+        setScreen() may recreate the native window, dropping the Win32
+        click-through styles applied in showEvent, so re-apply them here
+        when already visible.
+        """
+        self._target_screen_name = screen.name() if screen is not None else None
+        self._target_rect = QRect(rect)
+        if screen is not None and self.screen() is not screen:
+            self.setScreen(screen)
+        self.setGeometry(rect)
+        if self.isVisible():
+            apply_click_through(int(self.winId()))
